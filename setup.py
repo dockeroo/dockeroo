@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
-VERSION = '0.7'
+VERSION = '0.8'
 
 requires = [
     'future',
@@ -28,7 +28,8 @@ setup(name='dockeroo',
     description='Docker buildout recipe',
     long_description=README + '\n\n' +  CHANGES,
     classifiers=[
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Development Status :: 4 - Beta",
         "Operating System :: OS Independent",

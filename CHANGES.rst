@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.8 (23-07-2016)
+----------------
+
+Added support for Python 3.
+Added initial support for unit tests.
+
+
 0.7 (22-07-2016)
 ----------------
 
