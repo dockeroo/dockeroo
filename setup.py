@@ -11,6 +11,7 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
+VERSION = '0.1'
 
 requires = [
     'setuptools',
@@ -22,7 +23,7 @@ requires = [
 warnings.filterwarnings('ignore', '.*', UserWarning, 'distutils.dist', 267)
 
 setup(name='dockeroo',
-    version='0.1',
+    version=VERSION,
     description='Docker buildout recipe',
     long_description=README + '\n\n' +  CHANGES,
     classifiers=[
@@ -37,7 +38,8 @@ setup(name='dockeroo',
     author='Giacomo Cariello',
     author_email='info@dockeroo.com',
     url='http://dockeroo.com/',
-    keywords='buildout',
+    download_url='https://github.com/dockeroo/dockeroo/tarball/{version}'.format(version=VERSION),
+    keywords=['buildout', 'docker'],
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
