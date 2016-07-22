@@ -386,7 +386,7 @@ class DockerMachine(object):
 
     def get_container_ip_address(self, container):
         args = ['inspect', '--format="{{.NetworkSettings.IPAddress}}"', container]
-        p = DockerProcess(self, args)
+        p = DockerProcess(self, args, stdout=PIPE)
         if p.wait() != 0:
             raise DockerError(
                 "Error running command \"{}\" on machine \"{}\"".format(cmd, self.machine_name), p)
