@@ -324,7 +324,7 @@ class DockerMachine(object):
             if user:
                 args += ['-u', user]
             if volumes:
-                args += map(lambda (name, path): "--volume={}:{}".format(name, path), volumes)
+                args += map(lambda v: "--volume={}:{}".format(v[0], v[1]), volumes)
             if volumes_from:
                 args.append("--volumes-from={}".format(volumes_from))
             args.append(image)
@@ -473,7 +473,7 @@ class DockerMachine(object):
                     if path in paths:
                         continue
                     tarinfo = tarfile.TarInfo(path)
-                    tarinfo.mode = 0755
+                    tarinfo.mode = 0o755
                     tarinfo.uid = 0
                     tarinfo.gid = 0
                     tarinfo.type = tarfile.DIRTYPE
