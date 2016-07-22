@@ -9,6 +9,20 @@ dockeroo can build docker images from a classic Dockerfile or use a Gentoo_ cont
 .. _buildout: http://www.buildout.org/
 .. _Gentoo: http://www.gentoo.org/
 
+Useful links
+============
+
+* PyPI page: https://pypi.python.org/pypi/dockeroo/
+* Code repository: https://github.com/dockeroo/dockeroo
+
+
+Bug reports and Feedback
+========================
+
+Please don't hesitate to give feedback and especially report bugs or ask for new features on GitHub issue tracker:
+
+https://github.com/dockeroo/dockeroo/issues
+
 
 License
 =======
