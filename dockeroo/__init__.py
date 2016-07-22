@@ -301,10 +301,14 @@ class DockerMachine(object):
             raise DockerError(
                 "Error processing path on container \"{}\"".format(container_dst), p_out)
 
-    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False, volumes=None, volumes_from=None, user=None):
+    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False, volumes=None, volumes_from=None, user=None, env={}, ports={}):
         if not any(filter(lambda x: container in x['names'], self.containers(all=True))):
             self.logger.info("Creating container \"%s\"", container)
             args = ['create', '--name="{}"'.format(container)]
+            for k, v in env.items():
+                args += ['-e', "{}={}".format(k, v)]
+            for k, v in ports.items():
+                args += ['-p', "{}:{}".format(k, v)]
             if privileged:
                 args.append('--privileged')
             if tty:
