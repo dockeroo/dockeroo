@@ -16,8 +16,7 @@ class Recipe(DockerMachineRecipe):
 
         self.container_from = self.options['container-from']
         self.container_to = self.options['container-to']
-        self.paths = map(lambda y: merge([None, None], y.split()[:2]), filter(
-            None, map(lambda x: x.strip(), self.options.get('paths', '').split('\n'))))
+        self.paths = [merge([None, None], y.split()[:2]) for y in [f for f in [x.strip() for x in self.options.get('paths', '').split('\n')] if f]]
 
     def install(self):
         for src, dst in self.paths:

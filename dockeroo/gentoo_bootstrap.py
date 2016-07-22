@@ -24,21 +24,21 @@ class Recipe(DockerMachineRecipe):
         self.crossdev_platform = self.options.get(
             'crossdev-platform', self.machine_platform)
         self.script = "#!{}\n{}".format(self.shell,
-                                        '\n'.join(filter(None, map(lambda x: x.strip(), self.options.get('script').replace('$$', '$').split('\n'))))) if self.options.get('script', None) is not None else None
+                                        '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
         self.tty = self.options.get('tty', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
         self.archives = []
-        for url, prefix, md5sum in map(lambda x: merge([None, None, None], x.split())[:3], filter(None, map(lambda x: x.strip(), self.options.get('archives', self.options.get('archive', '')).split('\n')))):
+        for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in [_f for _f in [x.strip() for x in self.options.get('archives', self.options.get('archive', '')).split('\n')] if _f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
                 Archive(url=url, prefix=prefix, md5sum=md5sum))
-        self.volumes = filter(lambda y: y[0], map(lambda x: x.strip().split(
-            ':', 1), self.options.get('volumes', '').split('\n')))
+        self.volumes = [y for y in [x.strip().split(
+            ':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
 
     def install(self):
-        if not any(filter(lambda x: self.image == x['image'], self.images())):
+        if not any([x for x in self.images() if self.image == x['image']]):
             if not self.archives:
                 raise UserError(
                     "Image does not exist and no source specified.")

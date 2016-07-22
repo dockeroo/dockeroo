@@ -1,5 +1,11 @@
 
 from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import map
+from builtins import str
+from builtins import object
 
 import base64
 from copy import deepcopy
@@ -13,7 +19,7 @@ import platform
 import re
 from shellescape import quote
 from shutil import rmtree
-from StringIO import StringIO
+from io import StringIO
 from subprocess import Popen, PIPE, STDOUT
 import tarfile
 import tempfile
@@ -164,7 +170,7 @@ class DockerMachine(object):
         args = ['commit']
         if command:
             args.append(
-                "--change='CMD [{}]'".format(', '.join(map(lambda x: '"{}"'.format(x), command.split()))))
+                "--change='CMD [{}]'".format(', '.join(['"{}"'.format(x) for x in command.split()])))
         if user:
             args.append("--change='USER \"{}\"'".format(user))
         for k, v in labels.items():
@@ -173,7 +179,7 @@ class DockerMachine(object):
             args.append("--change='EXPOSE {}'".format(port))
         if volumes:
             args.append(
-                "--change='VOLUME [{}]'".format(', '.join(map(lambda x: '"{}"'.format(x), volumes))))
+                "--change='VOLUME [{}]'".format(', '.join(['"{}"'.format(x) for x in volumes])))
         args += [container, image]
         p = DockerProcess(self, args, stdout=FNULL)
         if p.wait() != 0:
@@ -201,7 +207,7 @@ class DockerMachine(object):
         params = ['ID', 'Image', 'Command', 'CreatedAt', 'RunningFor',
                   'Ports', 'Status', 'Size', 'Names', 'Labels', 'Mounts']
         args = ['ps', '--format',
-                SEP.join(map(lambda x: '{{{{.{}}}}}'.format(x), params))]
+                SEP.join(['{{{{.{}}}}}'.format(x) for x in params])]
         if all:
             args.append('-a')
         for k, v in filters.items():
@@ -210,8 +216,8 @@ class DockerMachine(object):
         for line in p.stderr.read().split(os.linesep)[:-1]:
             self.logger.error(line)
         p.wait()
-        params_map = dict(map(lambda x: (x, re.sub(
-            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()), params))
+        params_map = dict([(x, re.sub(
+            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
         ret = []
         for line in p.stdout.read().split(os.linesep)[:-1]:
             d = {}
@@ -221,11 +227,11 @@ class DockerMachine(object):
                     d[params_map[param]] = values[n].split(',') if values[
                         n] else []
                     if param == 'Labels':
-                        d[params_map[param]] = map(lambda x: tuple(
-                            x.split('=')), d[params_map[param]])
+                        d[params_map[param]] = [tuple(
+                            x.split('=')) for x in d[params_map[param]]]
                     elif param == 'Ports':
-                        d[params_map[param]] = map(lambda x: tuple(
-                            x.split('->')), d[params_map[param]])
+                        d[params_map[param]] = [tuple(
+                            x.split('->')) for x in d[params_map[param]]]
                 elif param == 'Status':
                     d[params_map[param]] = {
                         'created': 'created',
@@ -304,7 +310,7 @@ class DockerMachine(object):
     def create_container(self, container, image, command=None, privileged=False, run=False, tty=False,
                          volumes=None, volumes_from=None, user=None, networks=[], links={},
                          network_aliases=[], env={}, ports={}):
-        if not any(filter(lambda x: container in x['names'], self.containers(all=True))):
+        if not any([x for x in self.containers(all=True) if container in x['names']]):
             self.logger.info("Creating container \"%s\"", container)
             args = ['create', '--name="{}"'.format(container)]
             for k, v in env.items():
@@ -324,7 +330,7 @@ class DockerMachine(object):
             if user:
                 args += ['-u', user]
             if volumes:
-                args += map(lambda v: "--volume={}:{}".format(v[0], v[1]), volumes)
+                args += ["--volume={}:{}".format(v[0], v[1]) for v in volumes]
             if volumes_from:
                 args.append("--volumes-from={}".format(volumes_from))
             args.append(image)
@@ -356,7 +362,7 @@ class DockerMachine(object):
             raise DockerError("Error creating network \"{}\"".format(network), p)
 
     def create_volume(self, volume):
-        if any(filter(lambda x: volume == x['name'], self.volumes())):
+        if any([x for x in self.volumes() if volume == x['name']]):
             return
         self.logger.info("Creating volume \"%s\"", volume)
         args = ['volume', 'create', '--name="{}"'.format(volume)]
@@ -408,7 +414,7 @@ class DockerMachine(object):
         params = ['ID', 'Repository', 'Tag', 'Digest',
                   'CreatedSince', 'CreatedAt', 'Size']
         args = ['images', '--format',
-                SEP.join(map(lambda x: '{{{{.{}}}}}'.format(x), params))]
+                SEP.join(['{{{{.{}}}}}'.format(x) for x in params])]
         for k, v in filters.items():
             args += ['-f', '{}={}'.format(k, v)]
         if name is not None:
@@ -417,8 +423,8 @@ class DockerMachine(object):
         for line in p.stderr.read().split(os.linesep)[:-1]:
             self.logger.error(line)
         p.wait()
-        params_map = dict(map(lambda x: (x, re.sub(
-            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()), params))
+        params_map = dict([(x, re.sub(
+            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
         ret = []
         for line in p.stdout.read().split(os.linesep)[:-1]:
             d = {}

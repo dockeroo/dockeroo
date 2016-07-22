@@ -17,9 +17,7 @@ class Recipe(DockerMachineRecipe):
         if ':' not in self.image_name:
             self.image_name += ':latest'
         self.source = self.options['source']
-        self.build_args = dict(filter(lambda y: y[0],
-                               map(lambda x: x.strip().split('=', 1),
-                                   self.options.get('build-args', '').split('\n'))))
+        self.build_args = dict([y for y in [x.strip().split('=', 1) for x in self.options.get('build-args', '').split('\n')] if y[0]])
         self.keep = self.options.get('keep', 'false').strip(
             ).lower() in ('true', 'yes', 'on', '1')
 

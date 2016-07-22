@@ -15,32 +15,29 @@ class Recipe(DockerMachineRecipe):
         super(Recipe, self).__init__(buildout, name, options)
 
         self.archives = []
-        for url, prefix, md5sum in map(lambda x: merge([None, None, None], x.split())[:3], filter(None, map(lambda x: x.strip(), self.options.get('archives', self.options.get('archive', '')).split('\n')))):
+        for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in [f for f in [x.strip() for x in self.options.get('archives', self.options.get('archive', '')).split('\n')] if f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
                 Archive(url=url, prefix=prefix, md5sum=md5sum))
 
-        self.accept_keywords = filter(None, map(
-            lambda x: x.strip(), self.options.get('accept-keywords', '').split('\n')))
-        self.build_dependencies = filter(None, map(
-            lambda x: x.strip(), self.options.get('build-dependencies', '').split('\n')))
+        self.accept_keywords = [f for f in [x.strip() for x in self.options.get('accept-keywords', '').split('\n')] if f]
+        self.build_dependencies = [f for f in [x.strip() for x in self.options.get('build-dependencies', '').split('\n')] if f]
         self.build_command = self.options.get('build-command', "/bin/freeze")
         self.build_container = "{}_build".format(self.name)
         self.build_layout = self.options.get('build-layout', None)
         self.build_image = self.options.get('build-image', None)
-        self.build_env = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
-            '='), self.options.get('build-env', '').split('\n'))))
+        self.build_env = dict([y for y in [x.strip().split(
+            '=') for x in self.options.get('build-env', '').split('\n')] if y[0]])
         self.build_volumes_from = self.options.get('build-volumes-from', None)
         self.build_script_user = self.options.get('build-script-user', None)
         self.build_script_shell = self.options.get(
             'build-script-shell', self.shell)
         self.build_script = "#!{}\n{}".format(self.build_script_shell,
-                                              '\n'.join(filter(None, map(lambda x: x.strip(), self.options.get('build-script').replace('$$', '$').split('\n'))))) if self.options.get('build-script', None) is not None else None
+                                              '\n'.join([f for f in [x.strip() for x in self.options.get('build-script').replace('$$', '$').split('\n')] if f])) if self.options.get('build-script', None) is not None else None
 
         self.assemble_container = "{}_assemble".format(self.name)
-        self.copy = map(lambda y: merge([None, None], y.split()[:2]), filter(
-            None, map(lambda x: x.strip(), self.options.get('copy', '').split('\n'))))
+        self.copy = [merge([None, None], y.split()[:2]) for y in [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')] if f]]
         self.base_image = self.options.get('base-image', None)
         self.image = self.options['image']
         self.keep = self.options.get('keep', 'false').strip(
@@ -48,8 +45,7 @@ class Recipe(DockerMachineRecipe):
         self.layout = self.options.get('layout', None)
         self.layout_uid = self.options.get('layout-uid', 0)
         self.layout_gid = self.options.get('layout-gid', 0)
-        self.packages = filter(
-            None, map(lambda x: x.strip(), self.options.get('packages', '').split('\n')))
+        self.packages = [f for f in [x.strip() for x in self.options.get('packages', '').split('\n')] if f]
         self.platform = self.options.get('platform', self.machine_platform)
         self.arch = self.options.get('arch', self.platform)
         self.processor = self.options.get('processor', self.platform)
@@ -58,24 +54,19 @@ class Recipe(DockerMachineRecipe):
         self.script_user = self.options.get('script-user', None)
         self.script_shell = self.options.get('script-shell', self.shell)
         self.script = "#!{}\n{}".format(self.script_shell,
-                                        '\n'.join(filter(None, map(lambda x: x.strip(), self.options.get('script').replace('$$', '$').split('\n'))))) if self.options.get('script', None) is not None else None
+                                        '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
         self.tty = self.options.get('tty', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
-        self.masks = filter(None, map(lambda x: x.strip(),
-                                      self.options.get('mask', '').split('\n')))
-        self.unmasks = filter(
-            None, map(lambda x: x.strip(), self.options.get('unmask', '').split('\n')))
-        self.uses = filter(None, map(lambda x: x.strip(),
-                                     self.options.get('use', '').split('\n')))
+        self.masks = [_f for _f in [x.strip() for x in self.options.get('mask', '').split('\n')] if _f]
+        self.unmasks = [_f for _f in [x.strip() for x in self.options.get('unmask', '').split('\n')] if _f]
+        self.uses = [_f for _f in [x.strip() for x in self.options.get('use', '').split('\n')] if _f]
 
         self.command = self.options.get('command', "/bin/freeze")
         self.user = self.options.get('user', None)
-        self.labels = dict(filter(lambda y: y[0], map(
-            lambda x: x.strip().split('='), self.options.get('labels', '').split('\n'))))
-        self.expose = filter(
-            None, map(lambda x: x.strip(), self.options.get('expose', '').split('\n')))
-        self.volumes = filter(lambda y: y[0], map(lambda x: x.strip().split(
-            ':', 1), self.options.get('volumes', '').split('\n')))
+        self.labels = dict([y for y in [x.strip().split('=') for x in self.options.get('labels', '').split('\n')] if y[0]])
+        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').split('\n')] if _f]
+        self.volumes = [y for y in [x.strip().split(
+            ':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
 
     def install(self):
@@ -123,11 +114,11 @@ class Recipe(DockerMachineRecipe):
             self.run_cmd(self.build_container, "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\"".format(arch=self.arch,
                                                                                                                                            packages=' '.join(
                                                                                                                                                self.build_dependencies + self.packages),
-                                                                                                                                           env=' '.join(map(lambda x: '='.join(x), self.build_env.items()))))
-            package_atoms = map(lambda package: "={}".format(self.run_cmd(self.build_container,
+                                                                                                                                           env=' '.join(['='.join(x) for x in list(self.build_env.items())])))
+            package_atoms = ["={}".format(self.run_cmd(self.build_container,
                                                                           "chroot-{arch}-docker -c \"equery list --format=\"\\$cpv\" {package}\" | head -1".format(
                                                                               arch=self.arch, package=package),
-                                                                          quiet=True, return_output=True)), self.packages)
+                                                                          quiet=True, return_output=True)) for package in self.packages]
             self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
                 arch=self.arch, packages=' '.join(package_atoms)))
             if self.build_script:

@@ -20,21 +20,19 @@ class Recipe(DockerMachineRecipe):
         self.layout = self.options.get('layout', None)
         self.tty = self.options.get('tty', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
-        self.env = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
-            '='), self.options.get('env', '').split('\n'))))
-        self.ports = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
-            ':'), self.options.get('ports', '').split('\n'))))
-        self.links = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
-            ':'), self.options.get('links', '').split('\n'))))
-        self.networks = filter(None, map(lambda x: x.strip(), self.options.get('networks', '').split('\n')))
-        self.network_aliases = filter(None, map(lambda x: x.strip(), self.options.get('network-aliases', '').split('\n')))
-        self.volumes = filter(lambda y: y[0], map(lambda x: x.strip().split(':', 1),
-                                                  self.options.get('volumes', '').split('\n')))
+        self.env = dict([y for y in [x.strip().split(
+            '=') for x in self.options.get('env', '').split('\n')] if y[0]])
+        self.ports = dict([y for y in [x.strip().split(
+            ':') for x in self.options.get('ports', '').split('\n')] if y[0]])
+        self.links = dict([y for y in [x.strip().split(
+            ':') for x in self.options.get('links', '').split('\n')] if y[0]])
+        self.networks = [_f for _f in [x.strip() for x in self.options.get('networks', '').split('\n')] if _f]
+        self.network_aliases = [_f for _f in [x.strip() for x in self.options.get('network-aliases', '').split('\n')] if _f]
+        self.volumes = [y for y in [x.strip().split(':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
         self.script_shell = self.options.get('script-shell', self.shell)
         self.script_user = self.options.get('script-user', None)
-        self.script = "#!{}\n{}".format(self.script_shell, '\n'.join(filter(
-            None, map(lambda x: x.strip(), self.options.get('script').replace('$$', '$').split('\n'))))) \
+        self.script = "#!{}\n{}".format(self.script_shell, '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) \
             if self.options.get('script', None) is not None else None
 
     def install(self):

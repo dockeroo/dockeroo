@@ -1,3 +1,5 @@
+from builtins import range
+from builtins import object
 
 from datetime import datetime, timedelta, tzinfo
 import errno
@@ -79,7 +81,7 @@ def parse_datetime(value):
             if tzinfo[0] == '-':
                 offset = -offset
             tzinfo = get_fixed_timezone(offset)
-        kw = {k: int(v) for k, v in kw.iteritems() if v is not None}
+        kw = {k: int(v) for k, v in kw.items() if v is not None}
         kw['tzinfo'] = tzinfo
         return datetime(**kw)
 

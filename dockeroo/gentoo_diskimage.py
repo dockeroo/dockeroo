@@ -22,9 +22,9 @@ class Recipe(DockerMachineRecipe):
         self.build_script_shell = self.options.get(
             'build-script-shell', self.shell)
         self.prepare_script = "#!{}\n{}".format(self.build_script_shell,
-                                                '\n'.join(filter(None, map(lambda x: x.strip(), self.options.get('prepare-script').replace('$$', '$').split('\n'))))) if self.options.get('prepare-script', None) is not None else None
+                                                '\n'.join([_f for _f in [x.strip() for x in self.options.get('prepare-script').replace('$$', '$').split('\n')] if _f])) if self.options.get('prepare-script', None) is not None else None
         self.build_script = "#!{}\n{}".format(self.build_script_shell,
-                                              '\n'.join(filter(None, map(lambda x: x.strip(), self.options.get('build-script').replace('$$', '$').split('\n'))))) if self.options.get('build-script', None) is not None else None
+                                              '\n'.join([_f for _f in [x.strip() for x in self.options.get('build-script').replace('$$', '$').split('\n')] if _f])) if self.options.get('build-script', None) is not None else None
         self.build_root = self.options['build-root']
         self.base_image = self.options['base-image']
         self.image_file = self.options['image-file']
