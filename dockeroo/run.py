@@ -24,6 +24,10 @@ class Recipe(DockerMachineRecipe):
             '='), self.options.get('env', '').split('\n'))))
         self.ports = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
             ':'), self.options.get('ports', '').split('\n'))))
+        self.links = dict(filter(lambda y: y[0], map(lambda x: x.strip().split(
+            ':'), self.options.get('links', '').split('\n'))))
+        self.networks = filter(None, map(lambda x: x.strip(), self.options.get('networks', '').split('\n')))
+        self.network_aliases = filter(None, map(lambda x: x.strip(), self.options.get('network-aliases', '').split('\n')))
         self.volumes = filter(lambda y: y[0], map(lambda x: x.strip().split(':', 1),
                                                   self.options.get('volumes', '').split('\n')))
         self.volumes_from = self.options.get('volumes-from', None)
@@ -37,7 +41,9 @@ class Recipe(DockerMachineRecipe):
         self.remove_container(self.container)
         self.create_container(self.container, self.image, command=self.command, run=True,
                               tty=self.tty, volumes=self.volumes, volumes_from=self.volumes_from,
-                              user=self.user, env=self.env, ports=self.ports)
+                              user=self.user, env=self.env, ports=self.ports,
+                              networks=self.networks, links=self.links, network_aliases=self.network_aliases)
+        self.options['ip-address'] = self.get_container_ip_address(self.container)
         if self.layout:
             self.load_layout(self.container, self.layout)
         if self.script:

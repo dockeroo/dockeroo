@@ -301,7 +301,9 @@ class DockerMachine(object):
             raise DockerError(
                 "Error processing path on container \"{}\"".format(container_dst), p_out)
 
-    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False, volumes=None, volumes_from=None, user=None, env={}, ports={}):
+    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False,
+                         volumes=None, volumes_from=None, user=None, networks=[], links={},
+                         network_aliases=[], env={}, ports={}):
         if not any(filter(lambda x: container in x['names'], self.containers(all=True))):
             self.logger.info("Creating container \"%s\"", container)
             args = ['create', '--name="{}"'.format(container)]
@@ -309,6 +311,12 @@ class DockerMachine(object):
                 args += ['-e', "{}={}".format(k, v)]
             for k, v in ports.items():
                 args += ['-p', "{}:{}".format(k, v)]
+            for k, v in links.items():
+                args += ['--link', "{}:{}".format(k, v)]
+            for network in networks:
+                args += ['--network', network]
+            for network_alias in network_aliases:
+                args += ['--network-alias', network_alias]
             if privileged:
                 args.append('--privileged')
             if tty:
@@ -328,6 +336,24 @@ class DockerMachine(object):
                     "Error creating container \"{}\"".format(container), p)
         if run:
             self.start_container(container)
+
+    def create_network(self, network, driver='bridge', gateway=None, subnet=None, ip_range=None, ipv6=False, internal=False):
+        self.logger.info("Creating network \"%s\"", network)
+        args = ['network', 'create', '-d', driver]
+        if gateway is not None:
+            args += ['--gateway', gateway]
+        if ip_range is not None:
+            args += ['--ip-range', ip_range]
+        if subnet is not None:
+            args += ['--subnet', subnet]
+        if ipv6:
+            args.append('--ipv6')
+        if internal:
+            args.append('--internal')
+        args.append(network)
+        p = DockerProcess(self, args)
+        if p.wait() != 0:
+            raise DockerError("Error creating network \"{}\"".format(network), p)
 
     def create_volume(self, volume):
         if any(filter(lambda x: volume == x['name'], self.volumes())):
@@ -357,6 +383,14 @@ class DockerMachine(object):
 
     def get_random_name(self):
         return next(tempfile._get_candidate_names())
+
+    def get_container_ip_address(self, container):
+        args = ['inspect', '--format="{{.NetworkSettings.IPAddress}}"', container]
+        p = DockerProcess(self, args)
+        if p.wait() != 0:
+            raise DockerError(
+                "Error running command \"{}\" on machine \"{}\"".format(cmd, self.machine_name), p)
+        return p.stdout.read().rstrip(os.linesep)
 
     def machine_run_cmd(self, cmd, quiet=False, return_output=False):
         if not quiet:
@@ -547,6 +581,23 @@ class DockerMachine(object):
             raise DockerError(
                 "Error loading layout on container \"{}\"".format(container), p)
 
+    def networks(self, **filters):
+        params = ['id', 'name', 'driver']
+        args = ['network', 'ls']
+        for k, v in filters.items():
+            args += ['--filter', '{}={}'.format(k, v)]
+        p = DockerProcess(self, args, stdout=PIPE)
+        if p.wait() != 0:
+            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
+        ret = []
+        for line in p.stdout.read().split(os.linesep)[1:-1]:
+            d = {}
+            values = line.split()
+            for n, param in enumerate(params):
+                d[param] = values[n] if values[n] else None
+            ret.append(d)
+        return ret
+
     def process_path(self, container, path, fn):
         self.logger.info(
             "Processing path \"%s\" on container \"%s\"", path, container)
@@ -614,6 +665,14 @@ class DockerMachine(object):
                 raise DockerError(
                     "Error removing image \"{}\"".format(image['image']), p)
 
+    def remove_network(self, network):
+        for container in self.containers(all=True, network=network):
+            self.remove_container(container)
+        self.logger.info("Removing network \"%s\"", network)
+        p = DockerProcess(self, ['network', 'rm', network], stdout=FNULL)
+        if p.wait() != 0:
+            raise DockerError("Error removing network \"{}\"".format(network), p)
+
     def remove_volume(self, volume):
         for container in self.containers(all=True, volume=volume):
             self.remove_container(container)
@@ -676,22 +735,19 @@ class DockerMachine(object):
                 "Error creating container \"{}\"".format(container), p)
 
     def volumes(self, dangling=None):
-        params = ['Driver', 'Name']
+        params = ['driver', 'name']
         args = ['volume', 'ls']
         if dangling is not None:
             args += ['-f', 'dangling={}'.format(str(dangling).lower())]
         p = DockerProcess(self, args, stdout=PIPE)
-        for line in p.stderr.read().split(os.linesep)[:-1]:
-            self.logger.error(line)
-        p.wait()
+        if p.wait() != 0:
+            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
         ret = []
-        params_map = dict(map(lambda x: (x, re.sub(
-            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()), params))
         for line in p.stdout.read().split(os.linesep)[1:-1]:
             d = {}
             values = line.split()
             for n, param in enumerate(params):
-                d[params_map[param]] = values[n] if values[n] else None
+                d[param] = values[n] if values[n] else None
             ret.append(d)
         return ret
 

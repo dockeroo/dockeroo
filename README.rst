@@ -587,6 +587,59 @@ timeout
    **docker** command timeout.
 
 
+.. _network:
+
+network recipe
+=============
+
+This recipe creates a new network if it doesn't exist.
+
+Usage
+-----
+
+The following example buildout part creates a network named "internal_network".
+
+.. code-block:: ini
+
+    [internal_network]
+    recipe = dockeroo:network
+    subnet = 10.0.0.0/8
+    gateway = 10.0.0.1
+    ip-range = 10.0.1.0/24
+    ipv6 = true
+    keep = true
+
+Configuration options
+---------------------
+
+machine
+   Docker machine where **network** will be created. Defaults to "default".
+
+gateway
+    IP address of the network gateway. Auto if unset.
+
+subnet
+    CIDR subnet of the network. Auto if unset.
+
+name
+    Network name. Defaults to part name.
+
+internal
+    Disables access to external network.
+
+ip-range
+    Allocates IPs from a range.
+
+ipv6
+    Enables IPv6 networking. Defaults to false.
+
+keep
+    Don't delete network upon uninstall.
+
+timeout
+   **docker** command timeout.
+
+
 .. _pull:
 
 pull recipe
@@ -710,8 +763,17 @@ image
 layout
     Copies a local folder to container's root with **docker cp**.
 
+links
+    Links the container to the declared container. One per line, format is <container>:<alias>.
+
 machine
    Docker machine where **container** will be created. Defaults to "default".
+
+networks
+    Enables the selected network for the container. One per line.
+
+network-aliases
+    Adds the defined network aliases for the container. One per line.
 
 script
     Executes a shell script on container upon execution.
