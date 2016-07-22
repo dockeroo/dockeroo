@@ -590,7 +590,7 @@ timeout
 .. _network:
 
 network recipe
-=============
+==============
 
 This recipe creates a new network if it doesn't exist.
 
