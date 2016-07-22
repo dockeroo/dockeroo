@@ -16,14 +16,12 @@ class Recipe(DockerMachineRecipe):
         self.image = self.options['image']
         self.username = self.options['username']
         self.password = self.options['password']
-        self.tag = self.options.get('tag', 'latest')
         self.registry = self.options.get('registry', 'index.docker.io')
 
     def install(self):
         self.push_image(self.image,
                         self.username,
                         self.password,
-                        tag=self.tag,
                         registry=self.registry)
         return self.mark_completed()
 
