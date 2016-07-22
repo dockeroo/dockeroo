@@ -14,9 +14,10 @@ CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 VERSION = '0.7'
 
 requires = [
+    'future',
     'setuptools',
-    'tzlocal',
     'shellescape',
+    'tzlocal',
     'zc.buildout',
     ]
 
@@ -45,7 +46,7 @@ setup(name='dockeroo',
     zip_safe=False,
     install_requires=requires,
     tests_require=requires,
-    test_suite="dockeroo",
+    test_suite="dockeroo.tests",
     entry_points = {
         'zc.buildout': [
             'build = dockeroo.build:Recipe',

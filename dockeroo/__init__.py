@@ -727,7 +727,9 @@ class DockerMachine(object):
         args = ['cp', "{}:{}".format(container, src), "-"]
         p = DockerProcess(self, args, stdout=PIPE)
         tar = tarfile.open(fileobj=p.stdout, mode='r|')
-        tar.extractall(dst)
+        for member in tar:
+            member.name = os.path.normpath(member.name.lstrip('/'))
+            tar.extract(member, dst)
         tar.close()
         if p.wait() != 0:
             raise DockerError(
