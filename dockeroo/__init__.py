@@ -714,7 +714,7 @@ class DockerMachine(object):
         if shell is None:
             shell = self.shell
         args += [container] + shell.split(' ')
-        p = DockerProcess(self, args, stdin=PIPE, stderr=None)
+        p = DockerProcess(self, args, stdin=PIPE)
         p.stdin.write(script)
         p.stdin.close()
         if p.wait() != 0:
