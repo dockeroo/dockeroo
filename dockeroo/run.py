@@ -46,7 +46,7 @@ class Recipe(DockerMachineRecipe):
         if self.layout:
             self.load_layout(self.container, self.layout)
         if not self.start:
-            self.options['ip-address'] = None
+            self.options.pop('ip-address', None)
             return self.mark_completed()
         self.start_container(self.container)
         self.options['ip-address'] = self.get_container_ip_address(self.container)
