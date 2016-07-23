@@ -75,6 +75,7 @@ class DockerProcess(Popen):
         custom_env = os.environ.copy()
         custom_env.update(machine.client_environment)
         custom_env.update(env)
+        self.machine.logger.debug("Running command: %s", ' '.join(args))
         return super(DockerProcess, self).__init__(
             args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, env=custom_env)
 
@@ -110,8 +111,11 @@ class DockerRegistryLogin(object):
 
 class DockerMachine(object):
 
-    def __init__(self, machine_name='default', logger=None, shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
-        self.machine_name = machine_name
+    def __init__(self, machine_name=None, logger=None, shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
+        if machine_name is None:
+            self.machine_name = os.environ.get('DOCKER_MACHINE_NAME', 'default')
+        else:
+            self.machine_name = machine_name
         self.logger = logging.getLogger(logger or self.machine_name)
         self.shell = shell
         self.timeout = timeout
@@ -766,7 +770,7 @@ class DockerMachineRecipe(DockerMachine):
         self.buildout, self.name, self.options = buildout, name, options
         return super(DockerMachineRecipe, self).__init__(
             logger=self.name,
-            machine_name=self.options.get('machine', 'default'),
+            machine_name=self.options.get('machine', None),
             shell=self.options.get(
                 'shell', '/bin/sh'),
             timeout=int(self.options.get(

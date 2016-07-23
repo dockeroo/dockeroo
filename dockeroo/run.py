@@ -34,16 +34,22 @@ class Recipe(DockerMachineRecipe):
         self.script_user = self.options.get('script-user', None)
         self.script = "#!{}\n{}".format(self.script_shell, '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) \
             if self.options.get('script', None) is not None else None
+        self.start = self.options.get('start', 'true').strip(
+        ).lower() in ('true', 'yes', 'on', '1')
 
     def install(self):
         self.remove_container(self.container)
-        self.create_container(self.container, self.image, command=self.command, run=True,
+        self.create_container(self.container, self.image, command=self.command, run=False,
                               tty=self.tty, volumes=self.volumes, volumes_from=self.volumes_from,
                               user=self.user, env=self.env, ports=self.ports,
                               networks=self.networks, links=self.links, network_aliases=self.network_aliases)
-        self.options['ip-address'] = self.get_container_ip_address(self.container)
         if self.layout:
             self.load_layout(self.container, self.layout)
+        if not self.start:
+            self.options['ip-address'] = None
+            return self.mark_completed()
+        self.start_container(self.container)
+        self.options['ip-address'] = self.get_container_ip_address(self.container)
         if self.script:
             self.run_script(self.container, self.script,
                             shell=self.script_shell, user=self.script_user)

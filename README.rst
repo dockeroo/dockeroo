@@ -291,7 +291,8 @@ layout
     Copies a local folder to container's root with **docker cp**.
 
 machine
-   Docker machine where **build-image** and **base-image** reside. Defaults to "default".
+   Docker machine where **build-image** and **base-image** reside.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 script
     Execute this script after extraction of archives filesystem and import of layout.
@@ -578,7 +579,8 @@ image-file
    Disk image file which is extracted from build container.
 
 machine
-   Docker machine where **build-image** and **base-image** reside. Defaults to "default".
+   Docker machine where **build-image** and **base-image** reside.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 prepare-script
    This shell script is executed before **base-image** extraction.
@@ -613,7 +615,8 @@ Configuration options
 ---------------------
 
 machine
-   Docker machine where **network** will be created. Defaults to "default".
+   Docker machine where **network** will be created.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 gateway
     IP address of the network gateway. Auto if unset.
@@ -672,7 +675,8 @@ password
     Password for **docker login**. Defaults to unset.
 
 machine
-   Docker machine where **image** will be pulled to. Defaults to "default".
+   Docker machine where **image** will be pulled to.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 registry
     Registry name. Defaults to DockerHub registry (index.docker.io).
@@ -715,7 +719,8 @@ password
     Password for **docker login**.
 
 machine
-   Docker machine where **image** will be pushed from. Defaults to "default".
+   Docker machine where **image** will be pushed from.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 registry
     Registry name. Defaults to DockerHub registry (index.docker.io).
@@ -732,8 +737,9 @@ run recipe
 This recipe executes the following tasks:
 
 1. Create **container** from **image** if it doesn't exist.
-2. Run **container**.
-3. If **script** is set, execute it on the container with **docker exec**.
+2. If a **layout** is set in recipe, load it in container.
+3. Run **container**.
+4. If **script** is set, execute it on the container with **docker exec**.
 
 Usage
 -----
@@ -767,7 +773,8 @@ links
     Links the container to the declared container. One per line, format is <container>:<alias>.
 
 machine
-   Docker machine where **container** will be created. Defaults to "default".
+   Docker machine where **container** will be created.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 networks
     Enables the selected network for the container. One per line.
@@ -783,6 +790,9 @@ script-shell
 
 script-user
     User for **script** execution. Defaults to docker default.
+
+start
+    Start container after creation. Defaults to true.
 
 timeout
    **docker** command timeout.
@@ -822,7 +832,8 @@ Configuration options
 ---------------------
 
 machine
-   Docker machine where **volume** will be created. Defaults to "default".
+   Docker machine where **volume** will be created.
+   Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
 name
     Volume name. Defaults to part name.

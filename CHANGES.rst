@@ -1,10 +1,20 @@
 Changelog
 =========
 
+0.9 (23-07-2016)
+----------------
+
+Updated **machine_name** selection: if **machine** option is not set
+DOCKER_MACHINE_NAME environment variable is used, or "default" if unset.
+
+Added support for option **start** in **docker:run**.
+
+
 0.8 (23-07-2016)
 ----------------
 
 Added support for Python 3.
+
 Added initial support for unit tests.
 
 
@@ -18,8 +28,10 @@ Fixed **dockeroo:run** ip address fetch.
 ----------------
 
 Updated documentation.
+
 Added support for networks, network-aliases and links
 on **dockeroo:run**.
+
 Added new recipe **dockeroo:network**.
 
 
