@@ -12,12 +12,14 @@ class Recipe(DockerMachineRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)
+        if ':' not in self.name:
+            self.name += ':latest'
 
         self.command = self.options.get("command", "/bin/freeze")
         self.commit = self.options.get('commit', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
-        self.container = self.options.get('container', self.name)
-        self.image = self.options.get('image', "{}:latest".format(self.name))
+        self.container = self.options.get('container',
+            "{}_bootstrap".format(self.name.replace(':', '_')))
         self.keep = self.options.get('keep', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
         self.layout = self.options.get('layout', None)
@@ -38,16 +40,16 @@ class Recipe(DockerMachineRecipe):
         self.volumes_from = self.options.get('volumes-from', None)
 
     def install(self):
-        if not any([x for x in self.images() if self.image == x['image']]):
+        if not any([x for x in self.images() if self.name == x['image']]):
             if not self.archives:
                 raise UserError(
                     "Image does not exist and no source specified.")
             for archive in self.archives:
                 archive.download(self.buildout)
-            self.import_archives(self.image, *self.archives)
+            self.import_archives(self.name, *self.archives)
 
         if not self.containers(all=True, name=self.container):
-            self.create_container(self.container, self.image, command=self.command, privileged=True,
+            self.create_container(self.container, self.name, command=self.command, privileged=True,
                                   tty=self.tty, volumes=self.volumes, volumes_from=self.volumes_from)
         # else:
         #    raise RuntimeError("Container \"{}\" already exists".format(self.container))
@@ -65,7 +67,7 @@ class Recipe(DockerMachineRecipe):
             self.run_script(self.container, self.script)
 
         if self.commit:
-            self.commit_container(self.container, self.image)
+            self.commit_container(self.container, self.name)
             self.remove_container(self.container)
             self.clean_stale_images()
 
@@ -80,4 +82,4 @@ class Recipe(DockerMachineRecipe):
     def uninstall(self):
         self.remove_container(self.container)
         if not self.keep:
-            self.remove_image(self.image)
+            self.remove_image(self.name)

@@ -15,7 +15,6 @@ class Recipe(DockerMachineRecipe):
 
         self.image = self.options['image']
         self.command = self.options.get('command', None)
-        self.container = self.options.get('container', self.name)
         self.user = self.options.get('user', None)
         self.layout = self.options.get('layout', None)
         self.tty = self.options.get('tty', 'false').strip(
@@ -38,20 +37,20 @@ class Recipe(DockerMachineRecipe):
         ).lower() in ('true', 'yes', 'on', '1')
 
     def install(self):
-        self.remove_container(self.container)
-        self.create_container(self.container, self.image, command=self.command, run=False,
+        self.remove_container(self.name)
+        self.create_container(self.name, self.image, command=self.command, run=False,
                               tty=self.tty, volumes=self.volumes, volumes_from=self.volumes_from,
                               user=self.user, env=self.env, ports=self.ports,
                               networks=self.networks, links=self.links, network_aliases=self.network_aliases)
         if self.layout:
-            self.load_layout(self.container, self.layout)
+            self.load_layout(self.name, self.layout)
         if not self.start:
             self.options.pop('ip-address', None)
             return self.mark_completed()
-        self.start_container(self.container)
-        self.options['ip-address'] = self.get_container_ip_address(self.container)
+        self.start_container(self.name)
+        self.options['ip-address'] = self.get_container_ip_address(self.name)
         if self.script:
-            self.run_script(self.container, self.script,
+            self.run_script(self.name, self.script,
                             shell=self.script_shell, user=self.script_user)
         return self.mark_completed()
 

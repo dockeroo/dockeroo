@@ -767,14 +767,24 @@ class DockerMachine(object):
 class DockerMachineRecipe(DockerMachine):
 
     def __init__(self, buildout, name, options):
-        self.buildout, self.name, self.options = buildout, name, options
+        self.buildout, self.options = buildout, options
+        self.part_name = name
+        self.options.setdefault('name', name)
         return super(DockerMachineRecipe, self).__init__(
             logger=self.name,
-            machine_name=self.options.get('machine', None),
+            machine_name=self.options.get('machine-name', None),
             shell=self.options.get(
                 'shell', '/bin/sh'),
             timeout=int(self.options.get(
                 'timeout', DEFAULT_TIMEOUT)))
+
+    @property
+    def name(self):
+        return self.options.get('name', None)
+
+    @name.setter
+    def name(self, value):
+        self.options['name'] = value
 
     @reify
     def completed(self):

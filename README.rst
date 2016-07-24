@@ -86,7 +86,7 @@ Configuration options
 ---------------------
 
 name
-    Name of the image to apply as tag. Defaults to part name,
+    Name of the image to apply as tag. Defaults to part name.
 
 source
     Path or URL to pass as argument to **docker build**.
@@ -290,7 +290,7 @@ keep
 layout
     Copies a local folder to container's root with **docker cp**.
 
-machine
+machine-name
    Docker machine where **build-image** and **base-image** reside.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
@@ -430,9 +430,6 @@ copy
 expose
     Sets **EXPOSE** parameter on target image.
 
-image
-    Name of target image. Defaults to part name.
-
 keep
     Don't delete image upon uninstall.
 
@@ -450,6 +447,9 @@ layout-uid
 
 mask
     Sets /etc/portage/package.mask on builder container's chrooted environment, one per line.
+
+name
+    Name of target image. Defaults to part name.
 
 packages
     List of packages to be built in builder container's chrooted environment and installed
@@ -578,7 +578,7 @@ build-volumes-from
 image-file
    Disk image file which is extracted from build container.
 
-machine
+machine-name
    Docker machine where **build-image** and **base-image** reside.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
@@ -614,7 +614,7 @@ The following example buildout part creates a network named "internal_network".
 Configuration options
 ---------------------
 
-machine
+machine-name
    Docker machine where **network** will be created.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
@@ -665,8 +665,9 @@ The following example buildout part pulls **ubuntu** image from DockerHub.
 Configuration options
 ---------------------
 
-image
+name
     Image name to pull. Use the same format as **docker pull** commandline.
+    Defaults to part name.
 
 username
     Username for **docker login**. Defaults to unset.
@@ -674,7 +675,7 @@ username
 password
     Password for **docker login**. Defaults to unset.
 
-machine
+machine-name
    Docker machine where **image** will be pulled to.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
@@ -709,8 +710,9 @@ The following example buildout part pushes **my_image** to DockerHub.
 Configuration options
 ---------------------
 
-image
+name
     Image name to push. Use the same format as **docker push** commandline.
+    Defaults to part name.
 
 username
     Username for **docker login**.
@@ -718,7 +720,7 @@ username
 password
     Password for **docker login**.
 
-machine
+machine-name
    Docker machine where **image** will be pushed from.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 
@@ -760,9 +762,6 @@ Configuration options
 command
     Command to run on container. Defaults to unset.
 
-container
-    Container name. Defaults to part name.
-
 image
     Image to run.
 
@@ -772,9 +771,12 @@ layout
 links
     Links the container to the declared container. One per line, format is <container>:<alias>.
 
-machine
+machine-name
    Docker machine where **container** will be created.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
+name
+    Container name. Defaults to part name.
 
 networks
     Enables the selected network for the container. One per line.
@@ -831,7 +833,7 @@ The following example buildout part creates a volume named "distfiles_volume".
 Configuration options
 ---------------------
 
-machine
+machine-name
    Docker machine where **volume** will be created.
    Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
 

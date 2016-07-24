@@ -12,7 +12,6 @@ class Recipe(DockerMachineRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)
-        self.options['name'] = self.options.get('name', self.name)
 
         self.keep = self.options.get('keep', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
@@ -27,7 +26,7 @@ class Recipe(DockerMachineRecipe):
         self.ip_range = self.options.get('ip-range', None)
 
     def install(self):
-        self.create_network(self.options['name'],
+        self.create_network(self.name,
                             driver=self.driver,
                             gateway=self.gateway,
                             subnet=self.subnet,
@@ -41,4 +40,4 @@ class Recipe(DockerMachineRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_network(self.options['name'])
+            self.remove_network(self.name)

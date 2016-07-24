@@ -39,7 +39,6 @@ class Recipe(DockerMachineRecipe):
         self.assemble_container = "{}_assemble".format(self.name)
         self.copy = [merge([None, None], y.split()[:2]) for y in [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')] if f]]
         self.base_image = self.options.get('base-image', None)
-        self.image = self.options['image']
         self.keep = self.options.get('keep', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
         self.layout = self.options.get('layout', None)
@@ -73,7 +72,7 @@ class Recipe(DockerMachineRecipe):
         if self.base_image:
             base_image = self.base_image
         else:
-            base_image = self.image
+            base_image = self.name
             if self.archives:
                 for archive in self.archives:
                     archive.download(self.buildout)
@@ -138,7 +137,7 @@ class Recipe(DockerMachineRecipe):
                 self.config_binfmt(self.assemble_container, self.platform)
             self.run_script(self.assemble_container, self.script,
                             shell=self.script_shell, user=self.script_user)
-        self.commit_container(self.assemble_container, self.image,
+        self.commit_container(self.assemble_container, self.name,
                               command=self.command, user=self.user, labels=self.labels, expose=self.expose, volumes=self.volumes)
         self.remove_container(self.assemble_container)
         self.clean_stale_images()
@@ -149,7 +148,7 @@ class Recipe(DockerMachineRecipe):
             (self.build_layout and self.is_layout_updated(self.build_layout)) or \
             (self.build_image and self.is_image_updated(self.build_image)) or \
             (self.base_image and self.is_image_updated(self.base_image)) or \
-                not self.images(name=self.image):
+                not self.images(name=self.name):
             return self.install()
         else:
             return (self.completed, )
@@ -158,4 +157,4 @@ class Recipe(DockerMachineRecipe):
         self.remove_container(self.build_container)
         self.remove_container(self.assemble_container)
         if not self.keep:
-            self.remove_image(self.image)
+            self.remove_image(self.name)

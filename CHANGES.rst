@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.11 (23-07-2016)
+----------------
+
+Renamed primary option to "name" for all recipes.
+Renamed "machine" option to "machine-name".
+
+
 0.10 (23-07-2016)
 ----------------
 

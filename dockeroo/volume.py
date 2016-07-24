@@ -15,10 +15,9 @@ class Recipe(DockerMachineRecipe):
 
         self.keep = self.options.get('keep', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
-        self.options['name'] = self.options.get('name', self.name)
 
     def install(self):
-        self.create_volume(self.options['name'])
+        self.create_volume(self.name)
         return ()
 
     def update(self):
@@ -26,4 +25,4 @@ class Recipe(DockerMachineRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_volume(self.options['name'])
+            self.remove_volume(self.name)
