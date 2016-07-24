@@ -55,15 +55,15 @@ class Recipe(DockerMachineRecipe):
         return self.mark_completed()
 
     def update(self):
-        if self.is_image_updated(self.image):
+        if self.is_image_updated(self.image) or
+            not self.containers(name=self.name):
             return self.install()
-        else:
-            if (self.layout and self.is_layout_updated(self.layout)):
-                self.load_layout(self.name, self.layout)
-                if self.script:
-                    self.run_script(self.name, self.script,
-                                    shell=self.script_shell, user=self.script_user)
-            return self.mark_completed()
+        if (self.layout and self.is_layout_updated(self.layout)):
+            self.load_layout(self.name, self.layout)
+            if self.script:
+                self.run_script(self.name, self.script,
+                                shell=self.script_shell, user=self.script_user)
+        return self.mark_completed()
 
     def uninstall(self):
         self.remove_container(self.name)

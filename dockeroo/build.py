@@ -32,4 +32,4 @@ class Recipe(DockerMachineRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_image(self.image)
+            self.remove_image(self.name)

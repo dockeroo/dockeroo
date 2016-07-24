@@ -150,8 +150,7 @@ class Recipe(DockerMachineRecipe):
             (self.base_image and self.is_image_updated(self.base_image)) or \
                 not self.images(name=self.name):
             return self.install()
-        else:
-            return (self.completed, )
+        return self.mark_completed()
 
     def uninstall(self):
         self.remove_container(self.build_container)

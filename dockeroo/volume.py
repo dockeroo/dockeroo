@@ -18,10 +18,10 @@ class Recipe(DockerMachineRecipe):
 
     def install(self):
         self.create_volume(self.name)
-        return ()
+        return self.mark_completed()
 
     def update(self):
-        pass
+        return self.install()
 
     def uninstall(self):
         if not self.keep:

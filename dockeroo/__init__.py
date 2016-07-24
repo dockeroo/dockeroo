@@ -366,7 +366,7 @@ class DockerMachine(object):
             raise DockerError("Error creating network \"{}\"".format(network), p)
 
     def create_volume(self, volume):
-        if any([x for x in self.volumes() if volume == x['name']]):
+        if self.volumes(name=volume):
             return
         self.logger.info("Creating volume \"%s\"", volume)
         args = ['volume', 'create', '--name="{}"'.format(volume)]
@@ -746,11 +746,11 @@ class DockerMachine(object):
             raise DockerError(
                 "Error creating container \"{}\"".format(container), p)
 
-    def volumes(self, dangling=None):
+    def volumes(self, **filters):
         params = ['driver', 'name']
         args = ['volume', 'ls']
-        if dangling is not None:
-            args += ['-f', 'dangling={}'.format(str(dangling).lower())]
+        for k, v in filters.items():
+            args += ['-f', '{}={}'.format(k, v)]
         p = DockerProcess(self, args, stdout=PIPE)
         if p.wait() != 0:
             raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)

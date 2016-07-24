@@ -16,6 +16,8 @@ class Recipe(DockerMachineRecipe):
         self.username = self.options.get('username', None)
         self.password = self.options.get('password', None)
         self.registry = self.options.get('registry', 'index.docker.io')
+        self.keep = self.options.get('keep', 'false').strip(
+            ).lower() in ('true', 'yes', 'on', '1')
 
     def install(self):
         self.pull_image(self.name,
@@ -25,8 +27,11 @@ class Recipe(DockerMachineRecipe):
         return self.mark_completed()
 
     def update(self):
-        if self.is_image_updated(self.name):
+        if self.is_image_updated(self.name) or
+            not self.images(name=self.name):
             return self.install()
+        return self.mark_completed()
 
     def uninstall(self):
-        pass
+        if not self.keep:
+            self.remove_image(self.name)

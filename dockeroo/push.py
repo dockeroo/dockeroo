@@ -27,6 +27,7 @@ class Recipe(DockerMachineRecipe):
     def update(self):
         if self.is_image_updated(self.name):
             return self.install()
+        return self.mark_completed()
 
     def uninstall(self):
         pass

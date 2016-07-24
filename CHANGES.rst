@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.13 (24-07-2016)
+----------------
+
+Added keep option to **docker:pull**.
+update() methods now check wether target has to be rebuilt.
+
+
 0.12 (23-07-2016)
 ----------------
 
