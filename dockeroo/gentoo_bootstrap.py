@@ -74,7 +74,7 @@ class Recipe(DockerMachineRecipe):
         return self.mark_completed()
 
     def update(self):
-        if if (self.layout and self.is_layout_updated(self.layout)) or \
+        if (self.layout and self.is_layout_updated(self.layout)) or \
             not self.images(name=self.name):
             return self.install()
         return self.mark_completed()
