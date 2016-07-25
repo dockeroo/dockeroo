@@ -67,15 +67,15 @@ class Archive(object):
 
 class DockerProcess(Popen):
 
-    def __init__(self, machine, args, stdin=None, stdout=None, stderr=PIPE, env={}, config=None):
-        self.machine = machine
+    def __init__(self, engine, args, stdin=None, stdout=None, stderr=PIPE, env={}, config=None):
+        self.engine = engine
         args = ['docker'] + args
         if config is not None:
             args = ['--config', config] + args
         custom_env = os.environ.copy()
-        custom_env.update(machine.client_environment)
+        custom_env.update(engine.client_environment)
         custom_env.update(env)
-        self.machine.logger.debug("Running command: %s", ' '.join(args))
+        self.engine.logger.debug("Running command: %s", ' '.join(args))
         return super(DockerProcess, self).__init__(
             args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, env=custom_env)
 
@@ -90,15 +90,15 @@ class DockerMachineProcess(Popen):
 
 class DockerRegistryLogin(object):
 
-    def __init__(self, machine, registry, username, password):
-        self.machine = machine
+    def __init__(self, engine, registry, username, password):
+        self.engine = engine
         self.registry = "https://{}/v1/".format(registry)
         self.username = username
         self.password = password
 
     def __enter__(self):
         self.config_path = tempfile.mkdtemp()
-        p = DockerProcess(self.machine,
+        p = DockerProcess(self.engine,
                           ['login', '-u', self.username, '-p', self.password, self.registry],
                           config=self.config_path)
         if p.wait() != 0:
@@ -110,28 +110,55 @@ class DockerRegistryLogin(object):
 
 
 class DockerMachine(object):
+    def __init__(self, name):
+        self.name = name
+
+    @reify
+    def platform(self):
+        return self.run_cmd("uname -m", quiet=True, return_output=True)
+
+    @reify
+    def url(self):
+        p = DockerMachineProcess(['url', self.name], stdout=PIPE)
+        if p.wait() != 0:
+            raise DockerError("Error requesting \"docker-machine url {}\"".format(self.name), p)
+        return p.stdout.read().rstrip(os.linesep)
+
+    @reify
+    def inspect(self):
+        p = DockerMachineProcess(['inspect', self.name], stdout=PIPE)
+        if p.wait() != 0:
+            raise DockerError("Error requesting \"docker-machine inspect {}\"".format(self.name), p)
+        return json.loads(p.stdout.read())
+
+    def run_cmd(self, cmd, quiet=False, return_output=False):
+        if not quiet:
+            self.logger.info("Running command \"%s\" on machine \"%s\"", cmd, self.name)
+        args = ['ssh', self.name, cmd]
+        p = DockerMachineProcess(args, stdout=PIPE if return_output else None)
+        if p.wait() != 0:
+            raise DockerError(
+                "Error running command \"{}\" on machine \"{}\"".format(cmd, self.name), p)
+        if return_output:
+            return p.stdout.read().strip()
+
+
+class DockerEngine(object):
 
     def __init__(self, machine_name=None, logger=None, shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
-        if machine_name is None:
-            self.machine_name = os.environ.get('DOCKER_MACHINE_NAME', 'default')
-        else:
-            self.machine_name = machine_name
-        self.logger = logging.getLogger(logger or self.machine_name)
+        self.machine = DockerMachine(name=machine_name if machine_name is not None \
+            else os.environ.get('DOCKER_MACHINE_NAME', 'default'))
+        self.logger = logging.getLogger(logger or self.machine.name)
         self.shell = shell
         self.timeout = timeout
 
     @reify
     def client_environment(self):
-        p = DockerMachineProcess(['inspect', self.machine_name], stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker-machine inspect {}\"".format(self.machine_name), p)
-        inspect = json.loads(p.stdout.read())
-
         return {
-            'DOCKER_TLS_VERIFY': str(int(inspect['HostOptions']['EngineOptions']['TlsVerify'])),
-            'DOCKER_HOST': self.machine_url,
-            'DOCKER_CERT_PATH': inspect['HostOptions']['AuthOptions']['StorePath'].encode('utf-8'),
-            'DOCKER_MACHINE_NAME': self.machine_name,
+            'DOCKER_TLS_VERIFY': str(int(self.machine.inspect['HostOptions']['EngineOptions']['TlsVerify'])),
+            'DOCKER_HOST': self.machine.url,
+            'DOCKER_CERT_PATH': self.machine.inspect['HostOptions']['AuthOptions']['StorePath'].encode('utf-8'),
+            'DOCKER_MACHINE_NAME': self.machine.name,
         }
 
     @reify
@@ -139,17 +166,6 @@ class DockerMachine(object):
         p = DockerProcess(self, ['version', '-f', '{{.Client.Version}}'], stdout=PIPE)
         if p.wait() != 0:
             raise DockerError("Error requesting version", p)
-        return p.stdout.read().rstrip(os.linesep)
-
-    @reify
-    def machine_platform(self):
-        return self.machine_run_cmd("uname -m", quiet=True, return_output=True)
-
-    @reify
-    def machine_url(self):
-        p = DockerMachineProcess(['url', self.machine_name], stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker-machine url {}\"".format(self.machine_name), p)
         return p.stdout.read().rstrip(os.linesep)
 
     def build_dockerfile(self, tag, path, **kwargs):
@@ -399,19 +415,8 @@ class DockerMachine(object):
         p = DockerProcess(self, args, stdout=PIPE)
         if p.wait() != 0:
             raise DockerError(
-                "Error running command \"{}\" on machine \"{}\"".format(cmd, self.machine_name), p)
+                "Error requesting \"docker inspect {}\"".format(container), p)
         return p.stdout.read().rstrip(os.linesep)
-
-    def machine_run_cmd(self, cmd, quiet=False, return_output=False):
-        if not quiet:
-            self.logger.info("Running command \"%s\" on machine \"%s\"", cmd, self.machine_name)
-        args = ['ssh', self.machine_name, cmd]
-        p = DockerMachineProcess(args, stdout=PIPE if return_output else None)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error running command \"{}\" on machine \"{}\"".format(cmd, self.machine_name), p)
-        if return_output:
-            return p.stdout.read().strip()
 
     def images(self, name=None, **filters):
         SEP = '|'
@@ -530,7 +535,7 @@ class DockerMachine(object):
             f.gid = 0
             return f
         if platform is None:
-            platform = self.machine_platform
+            platform = self.machine.platform
         args = ['cp', '-', "{}:/".format(container)]
         p = DockerProcess(self, args, stdin=PIPE)
         tar = tarfile.open(fileobj=p.stdin, mode='w|')
@@ -764,13 +769,13 @@ class DockerMachine(object):
         return ret
 
 
-class DockerMachineRecipe(DockerMachine):
+class DockerRecipe(DockerEngine):
 
     def __init__(self, buildout, name, options):
         self.buildout, self.options = buildout, options
         self.part_name = name
         self.options.setdefault('name', name)
-        return super(DockerMachineRecipe, self).__init__(
+        return super(DockerRecipe, self).__init__(
             logger=self.name,
             machine_name=self.options.get('machine-name', None),
             shell=self.options.get(

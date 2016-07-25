@@ -5,11 +5,11 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerMachineRecipe
+from dockeroo import DockerRecipe
 from dockeroo.utils import merge
 
 
-class Recipe(DockerMachineRecipe):
+class Recipe(DockerRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)
@@ -29,7 +29,7 @@ class Recipe(DockerMachineRecipe):
         self.base_image = self.options['base-image']
         self.image_file = self.options['image-file']
 
-        self.platform = self.options.get('platform', self.machine_platform)
+        self.platform = self.options.get('platform', self.machine.platform)
         self.arch = self.options.get('arch', self.platform)
         self.tty = self.options.get('tty', 'false').strip(
         ).lower() in ('true', 'yes', 'on', '1')
@@ -41,7 +41,7 @@ class Recipe(DockerMachineRecipe):
         self.create_container(self.build_container, self.build_image, command=self.build_command,
                               privileged=True, tty=self.tty, volumes_from=self.build_volumes_from)
         self.start_container(self.build_container)
-        if self.platform != self.machine_platform:
+        if self.platform != self.machine.platform:
             self.config_binfmt(self.build_container, self.platform)
         if self.prepare_script:
             self.run_script(self.build_container, self.prepare_script,

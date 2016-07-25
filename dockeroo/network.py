@@ -5,10 +5,10 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerMachineRecipe
+from dockeroo import DockerRecipe
 
 
-class Recipe(DockerMachineRecipe):
+class Recipe(DockerRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)

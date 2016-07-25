@@ -4,11 +4,11 @@ import time
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
-from dockeroo import DockerMachineRecipe, Archive
+from dockeroo import DockerRecipe, Archive
 from dockeroo.utils import merge
 
 
-class Recipe(DockerMachineRecipe):
+class Recipe(DockerRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)
@@ -24,7 +24,7 @@ class Recipe(DockerMachineRecipe):
         ).lower() in ('true', 'yes', 'on', '1')
         self.layout = self.options.get('layout', None)
         self.crossdev_platform = self.options.get(
-            'crossdev-platform', self.machine_platform)
+            'crossdev-platform', self.machine.platform)
         self.script = "#!{}\n{}".format(self.shell,
                                         '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
         self.tty = self.options.get('tty', 'false').strip(
@@ -62,7 +62,7 @@ class Recipe(DockerMachineRecipe):
         self.start_container(self.container)
 
         if self.script:
-            if self.crossdev_platform != self.machine_platform:
+            if self.crossdev_platform != self.machine.platform:
                 self.config_binfmt(self.container, self.crossdev_platform)
             self.run_script(self.container, self.script)
 

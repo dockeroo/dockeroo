@@ -1,40 +1,47 @@
 Changelog
 =========
 
+0.16 (24-07-2016)
+-----------------
+
+Split DockerMachine and DockerEngine.
+Fixed CHANGELOG.rst formatting.
+
+
 0.15 (24-07-2016)
-----------------
+-----------------
 
 Minor fixes.
 
 
 0.14 (24-07-2016)
-----------------
+-----------------
 
 Minor fixes.
 
 
 0.13 (24-07-2016)
-----------------
+-----------------
 
 Added keep option to **docker:pull**.
 update() methods now check wether target has to be rebuilt.
 
 
 0.12 (23-07-2016)
-----------------
+-----------------
 
 Minor fix to **docker:run**.
 
 
 0.11 (23-07-2016)
-----------------
+-----------------
 
 Renamed primary option to "name" for all recipes.
 Renamed "machine" option to "machine-name".
 
 
 0.10 (23-07-2016)
-----------------
+-----------------
 
 Minor fix to **docker:run**.
 

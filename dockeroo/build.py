@@ -4,11 +4,11 @@ import time
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
-from dockeroo import DockerMachineRecipe, Archive
+from dockeroo import DockerRecipe, Archive
 from dockeroo.utils import merge
 
 
-class Recipe(DockerMachineRecipe):
+class Recipe(DockerRecipe):
 
     def __init__(self, buildout, name, options):
         super(Recipe, self).__init__(buildout, name, options)
