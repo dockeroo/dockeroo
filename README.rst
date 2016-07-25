@@ -58,6 +58,7 @@ dockeroo contains the following buildout recipes:
 * `gentoo-bootstrap`_: builds a gentoo builder image.
 * `gentoo-build`_: creates an image from a gentoo builder.
 * `gentoo-diskimage`_: generates a disk image from a docker image.
+* network_: creates a docker network.
 * pull_: pulls an image from a registry.
 * push_: pushes an image to a registry.
 * run_: runs a docker container.
