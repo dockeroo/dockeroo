@@ -12,14 +12,16 @@ from copy import deepcopy
 from collections import namedtuple
 from datetime import datetime
 from distutils.dir_util import copy_tree
+from io import StringIO
 import json
 import logging
 import os
 import platform
+import random
 import re
 from shellescape import quote
 from shutil import rmtree
-from io import StringIO
+import string
 from subprocess import Popen, PIPE, STDOUT
 import tarfile
 import tempfile
@@ -407,8 +409,8 @@ class DockerEngine(object):
             raise DockerError(
                 "Error exporting files from container \"{}\"".format(container), p)
 
-    def get_random_name(self):
-        return next(tempfile._get_candidate_names())
+    def get_random_name(self, size=8):
+        return ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(size))
 
     def get_container_ip_address(self, container):
         args = ['inspect', '--format="{{.NetworkSettings.IPAddress}}"', container]

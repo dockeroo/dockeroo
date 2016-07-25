@@ -6,6 +6,7 @@ Changelog
 
 Split DockerMachine and DockerEngine.
 Fixed CHANGELOG.rst formatting.
+Fixed get_random_name().
 
 
 0.15 (24-07-2016)

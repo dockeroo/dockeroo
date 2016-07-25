@@ -1,5 +1,5 @@
 
-from dockeroo import DockerMachine
+from dockeroo import DockerEngine
 
 import os
 import shutil
@@ -7,22 +7,22 @@ import tempfile
 import unittest
 
 
-class TestDockerMachineMethods(unittest.TestCase):
+class TestDockerEngineMethods(unittest.TestCase):
     def test_client_environment(self):
-        dm = DockerMachine()
+        dm = DockerEngine()
         self.assertIn('DOCKER_TLS_VERIFY', dm.client_environment)
         self.assertIn('DOCKER_HOST', dm.client_environment)
         self.assertIn('DOCKER_CERT_PATH', dm.client_environment)
         self.assertIn('DOCKER_MACHINE_NAME', dm.client_environment)
-        self.assertEqual(dm.client_environment['DOCKER_MACHINE_NAME'], dm.machine_name)
+        self.assertEqual(dm.client_environment['DOCKER_MACHINE_NAME'], dm.machine.name)
 
     def test_client_version(self):
-        dm = DockerMachine()
+        dm = DockerEngine()
         self.assertRegexpMatches(dm.client_version, r'^\d+.\d+.\d+$')
 
     def test_machine_platform(self):
-        dm = DockerMachine()
-        self.assertIn(dm.machine_platform, (
+        dm = DockerEngine()
+        self.assertIn(dm.machine.platform, (
             'arm', 'armv4', 'armv4t', 'armv5te', 'armv6j', 'armv7a',
             'hppa', 'hppa1.1', 'hppa2.0', 'hppa64',
             'i386', 'i486', 'i586', 'i686',
@@ -36,11 +36,11 @@ class TestDockerMachineMethods(unittest.TestCase):
             'x86_64'))
 
     def test_machine_url(self):
-        dm = DockerMachine()
-        self.assertRegexpMatches(dm.machine_url, '^tcp://')
+        dm = DockerEngine()
+        self.assertRegexpMatches(dm.machine.url, '^tcp://')
 
     def test_import_path(self):
-        dm = DockerMachine()
+        dm = DockerEngine()
         root = tempfile.mkdtemp()
         image = "{}:latest".format(dm.get_random_name().lower())
         dm.import_path(root, image)
@@ -49,7 +49,7 @@ class TestDockerMachineMethods(unittest.TestCase):
         shutil.rmtree(root)
 
     def test_layout(self):
-        dm = DockerMachine()
+        dm = DockerEngine()
         root = tempfile.mkdtemp()
         image = "{}:latest".format(dm.get_random_name().lower())
         container = dm.get_random_name().lower()
