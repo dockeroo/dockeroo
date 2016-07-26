@@ -23,11 +23,11 @@ from builtins import object
 from collections import defaultdict
 from decorator import decorate
 from datetime import datetime, timedelta, tzinfo
-from functools import update_wrapper
 import logging
 import random
 import re
 import string
+from zc.buildout import UserError
 
 
 TRUE_SET = {'true', 'on', 'yes', '1'}
@@ -49,7 +49,7 @@ class FixedOffset(tzinfo):
         return self.__name
 
     def dst(self, dt):
-        return ZERO
+        return timedelta(0)
 
     @classmethod
     def fixed_timezone(cls, offset):
@@ -198,7 +198,7 @@ def parse_datetime(value):
             kw['microsecond'] = kw['microsecond'].ljust(6, '0')
         tzinfo = kw.pop('tzinfo')
         if tzinfo == 'Z':
-            tzinfo = utc
+            tzinfo = FixedOffset.fixed_timezone(0)
         elif tzinfo is not None:
             offset_mins = int(tzinfo[-2:]) if len(tzinfo) > 3 else 0
             offset = 60 * int(tzinfo[1:3]) + offset_mins

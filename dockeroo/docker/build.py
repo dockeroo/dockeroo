@@ -16,12 +16,9 @@
 # limitations under the License.
 
 
-from zc.buildout import UserError
-from zc.buildout.download import Download
-
 from dockeroo import BaseGroupRecipe
-from dockeroo.docker import BaseDockerSubRecipe, Archive
-from dockeroo.utils import merge, string_as_bool
+from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.utils import string_as_bool
 
 
 class SubRecipe(BaseDockerSubRecipe):

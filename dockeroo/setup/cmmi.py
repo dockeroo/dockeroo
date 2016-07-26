@@ -1,5 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
 #
@@ -18,10 +16,9 @@ standard_library.install_aliases()
 # limitations under the License.
 
 
+from future import standard_library
+standard_library.install_aliases()
 import shlex
-from urllib.request import pathname2url
-from urllib.parse import urljoin
-from zc.buildout import UserError
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
 from dockeroo.utils import FALSE_SET

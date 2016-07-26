@@ -19,6 +19,7 @@
 import os
 from tempfile import mkdtemp
 from urlparse import urlparse, ParseResult, parse_qs
+from zc.buildout import UserError
 
 from dockeroo.filters import RecipeFilter
 from dockeroo.filters.scm import GitRecipeFilterMixin
@@ -34,7 +35,7 @@ REPO_TYPES = {
 class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
     filter_category = 'download'
 
-    def __call__(self, url, params={}, force=False):
+    def __call__(self, url, params=None, force=False):
         download = self.recipe.download_manager
         urlobj = urlparse(url)
         fragment_params = parse_qs(urlobj.fragment)
@@ -66,13 +67,14 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             'repository-type': repo_type,
         }
         d.update(dict(map(lambda (k, v): ('repository-{}'.format(k), v), fragment_params.items())))
-        ret = func(urlobj, path, params=params, force=force)
+        ret = func(urlobj, path, params=params or {}, force=force)
         if isinstance(ret, dict):
             d.update(ret)
         return d
 
-    def download_git(self, urlobj, path, params={}, force=False):
+    def download_git(self, urlobj, path, params=None, force=False):
         url = urlobj.geturl()
+        params = params or {}
         recursive = params.get('repository-recursive', False)
         verbose = string_as_bool(params.get('verbose', False))
         if not os.path.exists(path):

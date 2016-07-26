@@ -1,5 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
 #
@@ -18,10 +16,11 @@ standard_library.install_aliases()
 # limitations under the License.
 
 
-from collections import defaultdict
+from future import standard_library
+standard_library.install_aliases()
 import os
-from urllib.request import pathname2url
-from urllib.parse import urljoin
+from future.moves.urllib.parse import urljoin
+from future.moves.urllib.request import pathname2url
 from zc.buildout import UserError
 
 from dockeroo.setup.source import BaseSourceRecipe, BaseSourceSubRecipe

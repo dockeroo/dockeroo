@@ -17,7 +17,6 @@
 
 
 from zc.buildout import UserError
-from zc.buildout.download import Download
 
 from dockeroo import BaseGroupRecipe
 from dockeroo.docker import BaseDockerSubRecipe, Archive

@@ -1,5 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
 # 
@@ -18,9 +16,12 @@ standard_library.install_aliases()
 # limitations under the License.
 
 
+from future import standard_library
+standard_library.install_aliases()
 import os
-from urllib.parse import urlparse
-from urllib.request import url2pathname
+from future.moves.urllib.parse import urlparse
+from future.moves.urllib.request import url2pathname
+from zc.buildout import UserError
 from zc.buildout.download import check_md5sum
 
 from dockeroo.filters import RecipeFilter

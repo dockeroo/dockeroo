@@ -62,7 +62,7 @@ class DockerError(RuntimeError):
         err = ' '.join(process.stderr.read().splitlines())
         if err:
             full_msg = "{}: {}".format(full_msg, err)
-        return super(DockerError, self).__init__(full_msg)
+        super(DockerError, self).__init__(full_msg)
 
 
 class Archive(object):
@@ -92,7 +92,7 @@ class DockerProcess(Popen):
         custom_env.update(engine.client_environment)
         custom_env.update(env)
         self.engine.logger.debug("Running command: %s", ' '.join(args))
-        return super(DockerProcess, self).__init__(
+        super(DockerProcess, self).__init__(
             args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, env=custom_env)
 
 
@@ -690,7 +690,7 @@ class DockerEngine(object):
             args += ['--filter', '{}={}'.format(k, v)]
         p = DockerProcess(self, args, stdout=PIPE)
         if p.wait() != 0:
-            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
+            raise DockerError("Error requesting \"docker {}\"".format(' '.join(args)), p)
         ret = []
         for line in p.stdout.read().splitlines()[1:]:
             d = {}
@@ -729,7 +729,7 @@ class DockerEngine(object):
         full_image_name = '{}/{}'.format(registry, image)
         args = ['pull', full_image_name]
         if username and password:
-            with DockerRegistryLogin(registry, username, password) as login:
+            with DockerRegistryLogin(self, registry, username, password) as login:
                 p = DockerProcess(self, args, stdout=FNULL, config=login.config_path)
                 if p.wait() != 0:
                     raise DockerError(
@@ -845,7 +845,7 @@ class DockerEngine(object):
             args += ['-f', '{}={}'.format(k, v)]
         p = DockerProcess(self, args, stdout=PIPE)
         if p.wait() != 0:
-            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
+            raise DockerError("Error requesting \"docker {}\"".format(' '.join(args)), p)
         ret = []
         for line in p.stdout.read().splitlines()[1:]:
             d = {}

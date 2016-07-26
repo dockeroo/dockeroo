@@ -16,16 +16,8 @@
 # limitations under the License.
 
 
-from collections import defaultdict
-from itertools import chain
-from tempfile import mkdtemp, mkstemp
-
-from pkg_resources import WorkingSet, Environment, Requirement, DEVELOP_DIST, SOURCE_DIST, EGG_DIST, BINARY_DIST
-from zc.buildout import UserError, easy_install
+from zc.buildout import UserError
 from zc.buildout.easy_install import default_index_url, _get_index as get_index
-from zc.buildout.easy_install import runsetup_template as setup_template
-from zc.buildout.easy_install import setuptools_loc as setuptools_location
-from zc.buildout.easy_install import buildout_and_setuptools_path
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
 from dockeroo.utils import reify

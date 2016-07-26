@@ -61,14 +61,14 @@ class DockerMachineError(RuntimeError):
         err = ' '.join(process.stderr.read().splitlines())
         if err:
             full_msg = "{}: {}".format(full_msg, err)
-        return super(DockerMachineError, self).__init__(full_msg)
+        super(DockerMachineError, self).__init__(full_msg)
 
 
 class DockerMachineProcess(Popen):
 
     def __init__(self, args, stdin=None, stdout=None):
         args = ['docker-machine'] + args
-        return super(DockerMachineProcess, self).__init__(
+        super(DockerMachineProcess, self).__init__(
             args, stdin=stdin, stdout=stdout, stderr=PIPE, close_fds=True)
 
 

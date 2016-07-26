@@ -21,7 +21,7 @@ import shutil
 import tempfile
 
 from dockeroo import BaseGroupRecipe
-from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.docker import Archive, BaseDockerSubRecipe
 from dockeroo.utils import merge, string_as_bool
 
 

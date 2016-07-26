@@ -1,7 +1,3 @@
-from future import standard_library
-standard_library.install_aliases()
-from builtins import range
-from past.builtins import basestring
 
 # -*- coding: utf-8 -*-
 #
@@ -20,13 +16,14 @@ from past.builtins import basestring
 # limitations under the License.
 
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.builtins import basestring
 from collections import defaultdict
 import os
 import random
 import string
-from urllib.request import pathname2url
-from urllib.parse import urljoin
-from zc.buildout import UserError
 
 from dockeroo import BaseGroupRecipe, BaseSubRecipe
 from dockeroo.utils import reify

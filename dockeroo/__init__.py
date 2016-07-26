@@ -32,6 +32,7 @@ import shutil
 import string
 import subprocess
 import sys
+from future.moves.urllib.parse import parse_qs
 
 from zc.buildout import UserError
 from zc.buildout.download import Download
@@ -228,24 +229,30 @@ class BaseRecipe(object):
                          self.default_log_level)
 
         if 'install-script' in self.options[None]:
-            self.install_script = self.options.get('install-script')
+            self._install_script = self.options.get('install-script')
         elif 'script' in self.options[None]:
-            self.install_script = self.options.get('script')
-        elif not hasattr(self, 'install_script'):
+            self._install_script = self.options.get('script')
+        elif hasattr(self, 'install_script'):
+            self._install_script = self.install_script
+        else:
             raise UserError(
                 '''You must provide a "script" or "install-script" field.''')
 
         if 'update-script' in self.options[None]:
-            self.update_script = self.options.get('update-script')
+            self._update_script = self.options.get('update-script')
         elif 'script' in self.options[None]:
-            self.update_script = self.options.get('script')
+            self._update_script = self.options.get('script')
+        elif hasattr(self, 'update_script'):
+            self._update_script = self.update_script
         if self.update_script is not None:
             self.update = self.update_wrapper
 
         if 'uninstall-script' in self.options[None]:
-            self.uninstall_script = self.options.get('uninstall-script')
+            self._uninstall_script = self.options.get('uninstall-script')
         elif 'script' in self.options[None]:
-            self.uninstall_script = self.options.get('script')
+            self._uninstall_script = self.options.get('script')
+        elif hasattr(self, 'uininstall_script'):
+            self._uininstall_script = self.uininstall_script
         if self.uninstall_script is not None:
             self.uninstall = self.uninstall_wrapper
 
@@ -281,10 +288,10 @@ class BaseRecipe(object):
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self.install_script):
-                self.install_script()
+            if callable(self._install_script):
+                self._install_script()
             else:
-                exec(self.install_script)
+                exec(self._install_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -311,10 +318,10 @@ class BaseRecipe(object):
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self.update_script):
-                self.update_script()
+            if callable(self._update_script):
+                self._update_script()
             else:
-                exec(self.update_script)
+                exec(self._update_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -338,10 +345,10 @@ class BaseRecipe(object):
         self.setup_logging()
         exc = None
         try:
-            if callable(self.uninstall_script):
-                self.uninstall_script()
+            if callable(self._uninstall_script):
+                self._uninstall_script()
             else:
-                exec(self.uninstall_script)
+                exec(self._uninstall_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -490,6 +497,14 @@ class BaseSubRecipe(object):
         self.options = recipe.options[group]
 
     @property
+    def name(self):
+        return self.options.get('name', None)
+
+    @name.setter
+    def name(self, value):
+        self.options.set('name', value)
+
+    @property
     @reify
     def working_directory(self):
         return self.options.get('working-directory',
@@ -573,8 +588,10 @@ class BaseGroupRecipe(BaseRecipe):
 
     def __init__(self, buildout, name, options):
         super(BaseGroupRecipe, self).__init__(buildout, name, options)
+        if self.subrecipe_class is NotImplemented:
+            raise ValueError("subrecipe_class has not been set")
         for group in self.options:
-            self.subrecipes[group] = self.subrecipe_class(self, group)
+            self.subrecipes[group] = self.subrecipe_class(self, group) # pylint: disable=not-callable
             self.subrecipes[group].initialize()
 
     @property

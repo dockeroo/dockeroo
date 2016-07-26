@@ -1,4 +1,3 @@
-from builtins import str
 
 # -*- coding: utf-8 -*-
 #
@@ -17,24 +16,24 @@ from builtins import str
 # limitations under the License.
 
 
+from builtins import str
 import logging
 import os
 import re
 import string
-from collections import defaultdict
-from itertools import chain
+from copy import copy
 from tempfile import mkdtemp, mkstemp
 
 from setuptools.command.setopt import edit_config as setuptools_edit_config
 from pkg_resources import WorkingSet, Environment, Requirement, DEVELOP_DIST, SOURCE_DIST, EGG_DIST, BINARY_DIST
-from zc.buildout import UserError, easy_install
+from zc.buildout import UserError
 from zc.buildout.easy_install import default_index_url, _get_index as get_index
 from zc.buildout.easy_install import runsetup_template as setup_template
 from zc.buildout.easy_install import setuptools_loc as setuptools_location
 from zc.buildout.easy_install import buildout_and_setuptools_path
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
-from dockeroo.utils import reify
+from dockeroo.utils import reify, string_as_bool
 
 
 SIGNATURE_MARKER = 'zdockeroo'
@@ -99,7 +98,7 @@ class SubRecipe(BaseDownloadSubRecipe):
     @property
     @reify
     def allowed_options(self):
-        ret = super(SubRecipe, self).allowed_options.copy()
+        ret = copy(super(SubRecipe, self).allowed_options)
         ret.extend([
             'egg-name',
             'find-egg',
