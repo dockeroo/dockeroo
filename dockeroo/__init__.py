@@ -40,13 +40,13 @@ from zc.buildout.download import Download
 from dockeroo import filters
 from dockeroo.filters import scm as filters_scm
 from dockeroo.filters import RecipeFilter
+from dockeroo.utils import ExternalProcessError
 from dockeroo.utils import OptionRepository, reify
 from dockeroo.utils import resolve_loglevel, resolve_verbosity
 from dockeroo.utils import string_as_bool, uniq
 
 
 FILTERS = []
-
 
 class RecipeFilterset(object):
     _filters = defaultdict(list)
@@ -89,9 +89,9 @@ class RecipeFilterset(object):
                 warn('''Unable to import module "{}": {}'''.format(module_name, e))
             else:
                 for fltr in [entry for entry in [getattr(module, entry) for entry in dir(module)] \
-                    if inspect.isclass(entry) and
-                        issubclass(entry, RecipeFilter) and
-                        hasattr(entry, 'filter_category') and entry.filter_category]:
+                             if inspect.isclass(entry) and
+                             issubclass(entry, RecipeFilter) and
+                             hasattr(entry, 'filter_category') and entry.filter_category]:
 
                     FILTERS.append(fltr)
 
@@ -263,7 +263,9 @@ class BaseRecipe(object):
         return self.filterset('extract.archive', [src.strip(), dst], {'params': params or {}})
 
     def extract_scm(self, repo_type, src, dst, params=None):
-        return self.filterset('extract.scm', [repo_type, src.strip(), dst], {'params': params or {}})
+        return self.filterset('extract.scm',
+                              [repo_type, src.strip(), dst],
+                              {'params': params or {}})
 
     @property
     @reify
@@ -329,11 +331,10 @@ class BaseRecipe(object):
         finally:
             if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
                 for f in self.cleanup_paths:
-                    self.logger.info(
-                        '''Left path "{}" as requested'''.format(f))
+                    self.logger.info('Left path "%s" as requested', f)
             else:
                 for f in self.cleanup_paths:
-                    self.logger.debug('''Cleaning up "{}"'''.format(f))
+                    self.logger.debug('Cleaning up "%s"', f)
                     self.rm(f)
         specs = self.options.get('specs', default=None)
         if specs is not None:
@@ -343,14 +344,12 @@ class BaseRecipe(object):
 
     def uninstall_wrapper(self):
         self.setup_logging()
-        exc = None
         try:
             if callable(self._uninstall_script):
                 self._uninstall_script()
             else:
                 exec(self._uninstall_script)
-        except Exception as e:
-            exc = e
+        except Exception:
             self.restore_logging()
             raise
         self.restore_logging()
@@ -378,7 +377,7 @@ class BaseRecipe(object):
             subprocess_list.append((p, command))
             run_list.append(' '.join(command))
             previous = p
-        self.logger.info('''Running: "{}"'''.format(' | '.join(run_list)))
+        self.logger.info('Running: "%s"', ' | '.join(run_list))
         subprocess_list.reverse()
         [q[0].wait() for q in subprocess_list]
         for q in subprocess_list:
@@ -398,21 +397,19 @@ class BaseRecipe(object):
             self.copy_tree(origin, destination)
         return destination
 
-    def copy_tree(self, origin, destination, ignore=[]):
+    def copy_tree(self, origin, destination, ignore=None):
         if os.path.exists(destination):
             raise shutil.Error(
                 '''Destination already exists: "{}"'''.format(destination))
-        self.logger.debug(
-            '''Copying "{}" to "{}"'''.format(origin, destination))
+        self.logger.debug('Copying "%s" to "%s"', origin, destination)
         try:
             shutil.copytree(origin, destination,
-                            ignore=shutil.ignore_patterns(*ignore))
+                            ignore=shutil.ignore_patterns(*ignore or []))
         except (shutil.Error, OSError) as error:
             try:
                 shutil.rmtree(destination, ignore_errors=True)
             except (shutil.Error, OSError) as strerror:
-                self.logger.error(
-                    '''Error occurred when cleaning after error: "{}"'''.format(strerror))
+                self.logger.error('Error occurred when cleaning after error: "%s"', strerror)
             raise error
 
     def mkdir(self, *paths):
@@ -446,9 +443,9 @@ class BaseRecipe(object):
             if '#' in patch:
                 patch, params_string = patch.split('#', 1)
                 params.update(parse_qs(params_string))
-            if 'prefix' in params:
-                patch = os.path.join(params['prefix'], patch)
-            self.logger.info('''Applying patch: "{}"'''.format(patch))
+            if prefix is not None:
+                patch = os.path.join(prefix, patch)
+            self.logger.info('Applying patch: "%s"', patch)
             self.filterset('patch', [patch], {'params': params})
 
     def call(self, *args, **kwargs):
@@ -611,7 +608,7 @@ class BaseGroupRecipe(BaseRecipe):
         self.subrecipes = dict()
 
     def script(self, name, *args, **kwargs):
-        for group in self.subrecipes.keys():
+        for group in self.subrecipes:
             attr = getattr(self.subrecipes[group], name)
             if callable(attr):
                 attr(*args, **kwargs)

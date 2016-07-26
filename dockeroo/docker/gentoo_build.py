@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,22 +16,28 @@
 # limitations under the License.
 
 
-from shellescape import quote
 import shutil
 import tempfile
+
+from shellescape import quote
 
 from dockeroo import BaseGroupRecipe
 from dockeroo.docker import Archive, BaseDockerSubRecipe
 from dockeroo.utils import merge, string_as_bool
 
 
-class SubRecipe(BaseDockerSubRecipe):
+class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(DockerGentooBuildSubRecipe, self).initialize()
 
         self.archives = []
-        for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in [f for f in [x.strip() for x in self.options.get('archives', self.options.get('archive', '')).split('\n')] if f]]:
+        for url, prefix, md5sum in
+            [merge([None, None, None], x.split())[:3]
+             for x in [f for f in
+                      [x.strip() for x in self.options.get(
+                       'archives', self.options.get('archive', '')).split('\n')]
+             if f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
@@ -173,5 +179,5 @@ class SubRecipe(BaseDockerSubRecipe):
             self.remove_image(self.name)
 
 
-class Recipe(BaseGroupRecipe):
-    subrecipe_class = SubRecipe
+class DockerGentooBuildRecipe(BaseGroupRecipe):
+    subrecipe_class = DockerGentooBuildSubRecipe

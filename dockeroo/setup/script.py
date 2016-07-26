@@ -19,11 +19,11 @@
 from zc.buildout import UserError
 from zc.buildout.easy_install import default_index_url, _get_index as get_index
 
-from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
+from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
 from dockeroo.utils import reify
 
 
-class SubRecipe(BaseDownloadSubRecipe):
+class SetupScriptSubRecipe(BaseDownloadSubRecipe):
 
     @property
     @reify
@@ -39,7 +39,7 @@ class SubRecipe(BaseDownloadSubRecipe):
                                 self.recipe.buildout['buildout'].get('find-links', '')).split()
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(SetupScriptSubRecipe, self).initialize()
         if 'install-script' in self.options:
             self.install_script = self.options.get('install-script')
         elif 'script' in self.options:
@@ -55,7 +55,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         self.index = get_index(self.index_url, self.find_links_urls)
 
 
-class Recipe(DownloadRecipe):
+class SetupScriptRecipe(SetupDownloadRecipe):
     """
     A recipe to run an installation script.
 
@@ -73,4 +73,4 @@ class Recipe(DownloadRecipe):
         Installing part.
     """
 
-    subrecipe_class = SubRecipe
+    subrecipe_class = SetupScriptSubRecipe

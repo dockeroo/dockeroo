@@ -16,15 +16,17 @@
 # limitations under the License.
 
 
-from future import standard_library
-standard_library.install_aliases()
 import shlex
 
-from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
+from future import standard_library
+
+from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
 from dockeroo.utils import FALSE_SET
 
+standard_library.install_aliases()
 
-class SubRecipe(BaseDownloadSubRecipe):
+
+class SetupCmmiSubRecipe(BaseDownloadSubRecipe):
 
     def update(self):
         pass
@@ -38,7 +40,8 @@ class SubRecipe(BaseDownloadSubRecipe):
             self.logger.info("Preconfiguring with: {}".format(
                 ' '.join(preconfigure_command)))
             self.recipe.call(
-                *preconfigure_command, cwd=source['source-directory'], env=self.environment, shell=True)
+                *preconfigure_command, cwd=source['source-directory'],
+                env=self.environment, shell=True)
         configure_command = self.options.get('configure-command', None)
         if configure_command is None:
             configure_options = shlex.split(
@@ -53,7 +56,8 @@ class SubRecipe(BaseDownloadSubRecipe):
             self.logger.info('''Configuring with: "{}"'''.format(
                 ' '.join(configure_command)))
             self.recipe.call(
-                *configure_command, cwd=source['source-directory'], env=self.environment, shell=True)
+                *configure_command, cwd=source['source-directory'],
+                env=self.environment, shell=True)
         make_binary = self.options.get('make-binary', None)
         if make_binary is None:
             make_binary = 'make'
@@ -70,7 +74,8 @@ class SubRecipe(BaseDownloadSubRecipe):
             self.logger.info('''Building with: "{}"'''.format(
                 ' '.join(make_command)))
             self.recipe.call(
-                *make_command, cwd=source['source-directory'], env=self.environment, shell=True)
+                *make_command, cwd=source['source-directory'],
+                env=self.environment, shell=True)
         make_install_binary = self.options.get('make-install-binary', None)
         if make_install_binary is None:
             make_install_binary = make_binary
@@ -97,10 +102,11 @@ class SubRecipe(BaseDownloadSubRecipe):
             self.logger.info('''Installing with: "{}"'''.format(
                 ' '.join(make_install_command)))
             self.recipe.call(
-                *make_install_command, cwd=source['source-directory'], env=self.environment, shell=True)
+                *make_install_command, cwd=source['source-directory'],
+                env=self.environment, shell=True)
 
 
-class Recipe(DownloadRecipe):
+class SetupCmmiRecipe(SetupDownloadRecipe):
     """
     A recipe to configure, make and make install:
 
@@ -115,7 +121,7 @@ class Recipe(DownloadRecipe):
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/
         ...     https://pypi.python.org/simple/tzlocal/
-        ... 
+        ...
         ... [part]
         ... recipe = dockeroo:build.cmmi
         ... url = %(server)sdata/package-0.0.0.tar.gz
@@ -130,8 +136,8 @@ class Recipe(DownloadRecipe):
         dockeroo: Installing with: "make install"
         dockeroo: building package
     """
-    subrecipe_class = SubRecipe
+    subrecipe_class = SetupCmmiSubRecipe
 
     def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+        super(SetupCmmiRecipe, self).__init__(buildout, name, options)
         self.options.setdefault('build', 'true')

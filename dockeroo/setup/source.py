@@ -16,17 +16,19 @@
 # limitations under the License.
 
 
-from future import standard_library
-standard_library.install_aliases()
-from builtins import range
-from past.builtins import basestring
 from collections import defaultdict
 import os
 import random
 import string
 
+from builtins import range
+from future import standard_library
+from past.builtins import basestring
+
 from dockeroo import BaseGroupRecipe, BaseSubRecipe
 from dockeroo.utils import reify
+
+standard_library.install_aliases()
 
 
 class BaseSourceSubRecipe(BaseSubRecipe):
@@ -103,8 +105,12 @@ class BaseSourceSubRecipe(BaseSubRecipe):
         if load_options:
             source.update(self.common_options)
         source.setdefault('executable', self.executable)
-        source.setdefault('working-directory', os.path.join(self.working_directory,
-                                                            "tmp{}".format(''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8)))))
+        source.setdefault(
+            'working-directory',
+            os.path.join(
+                self.working_directory,
+                "tmp{}".format(''.join(random.choice(string.ascii_letters + string.digits) \
+                    for _ in range(8)))))
         if self.location is not None:
             source['location'] = self.location
 

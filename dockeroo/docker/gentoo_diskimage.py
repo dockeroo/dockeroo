@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,10 +23,10 @@ from dockeroo.docker import BaseDockerSubRecipe
 from dockeroo.utils import string_as_bool
 
 
-class SubRecipe(BaseDockerSubRecipe):
+class GentooDiskImageSubRecipe(BaseDockerSubRecipe):
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(GentooDiskImageSubRecipe, self).initialize()
 
         self.build_command = self.options.get('build-command', "/bin/freeze")
         self.build_container = "{}_build".format(self.name)
@@ -35,10 +35,18 @@ class SubRecipe(BaseDockerSubRecipe):
         self.build_script_user = self.options.get('build-script-user', None)
         self.build_script_shell = self.options.get(
             'build-script-shell', self.shell)
-        self.prepare_script = "#!{}\n{}".format(self.build_script_shell,
-                                                '\n'.join([_f for _f in [x.strip() for x in self.options.get('prepare-script').replace('$$', '$').split('\n')] if _f])) if self.options.get('prepare-script', None) is not None else None
-        self.build_script = "#!{}\n{}".format(self.build_script_shell,
-                                              '\n'.join([_f for _f in [x.strip() for x in self.options.get('build-script').replace('$$', '$').split('\n')] if _f])) if self.options.get('build-script', None) is not None else None
+        self.prepare_script = "#!{}\n{}".format(
+            self.build_script_shell, '\n'.join(
+                [_f for _f in
+                 [x.strip() for x in
+                  self.options.get('prepare-script').replace('$$', '$').split('\n')]
+                 if _f])) if self.options.get('prepare-script', None) is not None else None
+        self.build_script = "#!{}\n{}".format(
+            self.build_script_shell, '\n'.join(
+                [_f for _f in
+                 [x.strip() for x in
+                  self.options.get('build-script').replace('$$', '$').split('\n')]
+                 if _f])) if self.options.get('build-script', None) is not None else None
         self.build_root = self.options['build-root']
         self.base_image = self.options['base-image']
         self.image_file = self.options['image-file']
@@ -80,5 +88,5 @@ class SubRecipe(BaseDockerSubRecipe):
         self.remove_container(self.build_container)
 
 
-class Recipe(BaseGroupRecipe):
-    subrecipe_class = SubRecipe
+class GentooDiskImageRecipe(BaseGroupRecipe):
+    subrecipe_class = GentooDiskImageSubRecipe

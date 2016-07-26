@@ -16,15 +16,17 @@
 # limitations under the License.
 
 
-from future import standard_library
-standard_library.install_aliases()
 import os
+
+from future import standard_library
 from future.moves.urllib.parse import urljoin
 from future.moves.urllib.request import pathname2url
 from zc.buildout import UserError
 
 from dockeroo.setup.source import BaseSourceRecipe, BaseSourceSubRecipe
 from dockeroo.utils import reify
+
+standard_library.install_aliases()
 
 
 class BaseDownloadSubRecipe(BaseSourceSubRecipe):
@@ -62,8 +64,8 @@ class BaseDownloadSubRecipe(BaseSourceSubRecipe):
         destination = source[destkey]
         if source['download-mode'] == 'file':
             if self.options.get_as_bool('unpack', True):
-                source['extract-directory'] = self.recipe.extract_archive(source['download-path'],
-                                                                          source['working-directory'], params=source)
+                source['extract-directory'] = self.recipe.extract_archive(
+                    source['download-path'], source['working-directory'], params=source)
                 if source['extract-directory'] is None:
                     raise UserError('''Unknown source format.''')
                 main_directory = self.recipe.guess_main_directory(
@@ -97,7 +99,7 @@ class BaseDownloadSubRecipe(BaseSourceSubRecipe):
             raise UserError('''Invalid download mode.''')
 
 
-class SubRecipe(BaseDownloadSubRecipe):
+class SetupDownloadSubRecipe(BaseDownloadSubRecipe):
 
     def prepare_source(self, source):
         destkey = 'download-path' if source.get(
@@ -109,7 +111,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         pass
 
 
-class Recipe(BaseSourceRecipe):
+class SetupDownloadRecipe(BaseSourceRecipe):
     """
     A recipe to download a remote package or to copy a local package.
 
@@ -125,7 +127,7 @@ class Recipe(BaseSourceRecipe):
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/
         ...     https://pypi.python.org/simple/tzlocal/
-        ... 
+        ...
         ... [part]
         ... recipe = dockeroo:build.download
         ... url = %(server)sdata/package-0.0.0.tar.gz
@@ -153,7 +155,7 @@ class Recipe(BaseSourceRecipe):
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/
         ...     https://pypi.python.org/simple/tzlocal/
-        ... 
+        ...
         ... [part]
         ... recipe = dockeroo:build.download
         ... url = git+https://github.com/buildout/buildout.git
@@ -173,4 +175,4 @@ class Recipe(BaseSourceRecipe):
         dockeroo: Running command: git fetch -q origin
         dockeroo: Running command: git checkout-index -q -a -f --prefix="<PATH>"
     """
-    subrecipe_class = SubRecipe
+    subrecipe_class = SetupDownloadSubRecipe

@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,12 +25,13 @@ from dockeroo.filters import RecipeFilter
 class ArchiveExtractFilter(RecipeFilter):
     filter_category = 'extract.archive'
 
-    def __call__(self, path, extract_dir, params={}):
+    def __call__(self, path, extract_dir, params=None):
+        params = params or {}
         if not os.path.isfile(path):
             return None
         try:
             setuptools.archive_util.unpack_archive(path, extract_dir)
-        except:
+        except Exception:
             return None
         else:
             return extract_dir

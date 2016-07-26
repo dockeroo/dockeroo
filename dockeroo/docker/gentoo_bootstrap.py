@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,26 +23,35 @@ from dockeroo.docker import BaseDockerSubRecipe, Archive
 from dockeroo.utils import merge, string_as_bool
 
 
-class SubRecipe(BaseDockerSubRecipe):
+class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe):
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(DockerGentooBootstrapSubRecipe, self).initialize()
         if ':' not in self.name:
             self.name += ':latest'
 
         self.command = self.options.get("command", "/bin/freeze")
         self.commit = string_as_bool(self.options.get('commit', False))
         self.container = self.options.get('container',
-            "{}_bootstrap".format(self.name.replace(':', '_')))
+                                          "{}_bootstrap".format(self.name.replace(':', '_')))
         self.keep = string_as_bool(self.options.get('keep', False))
         self.layout = self.options.get('layout', None)
         self.crossdev_platform = self.options.get(
             'crossdev-platform', self.machine.platform)
-        self.script = "#!{}\n{}".format(self.shell,
-                                        '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
+        self.script = "#!{}\n{}".format(
+            self.shell, '\n'.join([_f for _f in
+                                   [x.strip() for x in
+                                    self.options.get('script').replace('$$', '$').split('\n')]
+                                   if _f])) \
+                                   if self.options.get('script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
         self.archives = []
-        for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in [_f for _f in [x.strip() for x in self.options.get('archives', self.options.get('archive', '')).split('\n')] if _f]]:
+        for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in
+                                    [_f for _f in
+                                     [x.strip() for x in
+                                      self.options.get(
+                                          'archives', self.options.get('archive', '')).split('\n')]
+                                     if _f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
@@ -61,8 +70,9 @@ class SubRecipe(BaseDockerSubRecipe):
             self.import_archives(self.name, *self.archives)
 
         if not self.containers(all=True, name=self.container):
-            self.create_container(self.container, self.name, command=self.command, privileged=True,
-                                  tty=self.tty, volumes=self.volumes, volumes_from=self.volumes_from)
+            self.create_container(self.container, self.name, command=self.command,
+                                  privileged=True, tty=self.tty, volumes=self.volumes,
+                                  volumes_from=self.volumes_from)
         # else:
         #    raise RuntimeError("Container \"{}\" already exists".format(self.container))
 
@@ -97,5 +107,5 @@ class SubRecipe(BaseDockerSubRecipe):
             self.remove_image(self.name)
 
 
-class Recipe(BaseGroupRecipe):
-    subrecipe_class = SubRecipe
+class DockerGentooBootstrapRecipe(BaseGroupRecipe):
+    subrecipe_class = DockerGentooBootstrapSubRecipe

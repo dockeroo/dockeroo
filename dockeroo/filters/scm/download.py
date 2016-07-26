@@ -1,16 +1,14 @@
-from future import standard_library
-standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,13 +18,16 @@ standard_library.install_aliases()
 
 import os
 from tempfile import mkdtemp
-from urllib.parse import urlparse, ParseResult, parse_qs
+
+from future import standard_library
+from future.moves.urllib.parse import urlparse, ParseResult, parse_qs
 from zc.buildout import UserError
 
 from dockeroo.filters import RecipeFilter
 from dockeroo.filters.scm import GitRecipeFilterMixin
 from dockeroo.utils import quote, string_as_bool
 
+standard_library.install_aliases()
 
 REPO_TYPES = {
     'git': ('git', 'git'),
@@ -34,10 +35,11 @@ REPO_TYPES = {
     'git+https': ('git', 'https'),
 }
 
+
 class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
     filter_category = 'download'
 
-    def __call__(self, url, params=None, force=False):
+    def __call__(self, url, params=None, force=False): #pylint: disable=too-many-locals
         download = self.recipe.download_manager
         urlobj = urlparse(url)
         fragment_params = parse_qs(urlobj.fragment)
@@ -47,11 +49,11 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
         except KeyError:
             return None
         urlobj = ParseResult(scheme=repo_scheme,
-            netloc=urlobj.netloc,
-            path=urlobj.path,
-            params=urlobj.params,
-            query=urlobj.query,
-            fragment='')
+                             netloc=urlobj.netloc,
+                             path=urlobj.path,
+                             params=urlobj.params,
+                             query=urlobj.query,
+                             fragment='')
         func = {
             'git': self.download_git,
         }[repo_type]
@@ -63,18 +65,18 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             self.recipe.mkdir(base_path)
         path = os.path.join(base_path, download.filename(url))
         self.logger.info('''Downloading {}'''.format(urlobj.geturl()))
-        d = {
+        ret = {
             'download-path': path,
             'download-mode': 'scm',
             'repository-type': repo_type,
         }
-        d.update(dict([('repository-{}'.format(k), v) for k, v in list(fragment_params.items())]))
-        ret = func(urlobj, path, params=params or {}, force=force)
-        if isinstance(ret, dict):
-            d.update(ret)
-        return d
+        ret.update(dict([('repository-{}'.format(k), v) for k, v in list(fragment_params.items())]))
+        result = func(urlobj, path, params=params or {}, force=force)
+        if isinstance(result, dict):
+            ret.update(result)
+        return ret
 
-    def download_git(self, urlobj, path, params=None, force=False):
+    def download_git(self, urlobj, path, params=None, force=False): #pylint: disable=unused-argument
         url = urlobj.geturl()
         params = params or {}
         recursive = params.get('repository-recursive', False)

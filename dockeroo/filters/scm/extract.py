@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@
 
 
 import os
-import setuptools
 
 from dockeroo.filters import RecipeFilter
 from dockeroo.filters.scm import GitRecipeFilterMixin
@@ -27,20 +26,21 @@ from dockeroo.utils import quote, string_as_bool
 class ScmExtractFilter(RecipeFilter, GitRecipeFilterMixin):
     filter_category = 'extract.scm'
 
-    def __call__(self, repo_type, path, extract_dir, params={}):
+    def __call__(self, repo_type, path, extract_dir, params=None):
         if not os.path.isdir(path):
             return None
         try:
             func = {
                 'git': self.extract_git,
             }[repo_type]
-        except:
+        except Exception:
             return None
         else:
-            func(path, extract_dir, params=params)
+            func(path, extract_dir, params=params or {})
             return extract_dir
 
-    def extract_git(self, src, dst, params={}):
+    def extract_git(self, src, dst, params=None):
+        params = params or {}
         rev = params.get('repository-rev', None)
         branch = params.get('repository-branch', None)
         subpath = params.get('repository-subpath', None)

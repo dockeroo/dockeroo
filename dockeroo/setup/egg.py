@@ -25,14 +25,15 @@ from copy import copy
 from tempfile import mkdtemp, mkstemp
 
 from setuptools.command.setopt import edit_config as setuptools_edit_config
-from pkg_resources import WorkingSet, Environment, Requirement, DEVELOP_DIST, SOURCE_DIST, EGG_DIST, BINARY_DIST
+from pkg_resources import WorkingSet, Environment, Requirement, DEVELOP_DIST
+from pkg_resources import SOURCE_DIST, EGG_DIST, BINARY_DIST
 from zc.buildout import UserError
 from zc.buildout.easy_install import default_index_url, _get_index as get_index
 from zc.buildout.easy_install import runsetup_template as setup_template
 from zc.buildout.easy_install import setuptools_loc as setuptools_location
 from zc.buildout.easy_install import buildout_and_setuptools_path
 
-from dockeroo.setup.download import BaseDownloadSubRecipe, Recipe as DownloadRecipe
+from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
 from dockeroo.utils import reify, string_as_bool
 
 
@@ -60,20 +61,21 @@ BUILD_EXT_OPTIONS = frozenset((
 ))
 
 
-class SubRecipe(BaseDownloadSubRecipe):
+class SetupEggSubRecipe(BaseDownloadSubRecipe):
 
     @property
     @reify
     def index_url(self):
-        return self.options.get('index',
-                                self.recipe.buildout['buildout'].get('index',
-                                                                     default_index_url))
+        return self.options.get(
+            'index',
+            self.recipe.buildout['buildout'].get('index', default_index_url))
 
     @property
     @reify
     def find_links_urls(self):
-        return self.options.get('find-links',
-                                self.recipe.buildout['buildout'].get('find-links', '')).split()
+        return self.options.get(
+            'find-links',
+            self.recipe.buildout['buildout'].get('find-links', '')).split()
 
     @property
     @reify
@@ -86,10 +88,10 @@ class SubRecipe(BaseDownloadSubRecipe):
     @property
     @reify
     def source_option_processors(self):
-        ret = super(SubRecipe, self).source_option_processors.copy()
+        ret = super(SetupEggSubRecipe, self).source_option_processors.copy()
         ret.update({
-            'build': lambda x: string_as_bool(x),
-            'build-dependencies': lambda x: string_as_bool(x),
+            'build': string_as_bool,
+            'build-dependencies': string_as_bool,
             'extra-paths': lambda x: [x.strip() for x in x.splitlines()],
             'egg-path': lambda x: [x.strip() for x in x.splitlines()],
         })
@@ -98,7 +100,7 @@ class SubRecipe(BaseDownloadSubRecipe):
     @property
     @reify
     def allowed_options(self):
-        ret = copy(super(SubRecipe, self).allowed_options)
+        ret = copy(super(SetupEggSubRecipe, self).allowed_options)
         ret.extend([
             'egg-name',
             'find-egg',
@@ -115,7 +117,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         return ret
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(SetupEggSubRecipe, self).initialize()
         if self.recipe.options.get_as_bool('split-working-set', False):
             self.working_set = WorkingSet([])
         else:
@@ -123,7 +125,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         self.index = get_index(self.index_url, self.find_links_urls)
 
     def populate_source(self, source, dependency=False):
-        super(SubRecipe, self).populate_source(
+        super(SetupEggSubRecipe, self).populate_source(
             source, load_options=not dependency)
         if 'egg' not in source:
             source['egg'] = self.name
@@ -146,7 +148,9 @@ class SubRecipe(BaseDownloadSubRecipe):
         source['egg-environment'] = Environment(source['egg-path'])
         source['build-options'] = {}
         if not dependency:
-            for src_key, dst_key in [(key, re.sub('-', '_', key)) for key in [option for option in self.options if option in BUILD_EXT_OPTIONS]]:
+            for src_key, dst_key in [(key, re.sub('-', '_', key)) for key in
+                                     [option for option in self.options
+                                      if option in BUILD_EXT_OPTIONS]]:
                 source['build-options'][dst_key] = self.options[src_key]
         source.setdefault('signature', self.resolve_signature(source))
 
@@ -168,8 +172,9 @@ class SubRecipe(BaseDownloadSubRecipe):
                     raise UserError(
                         '''Couldn't download index "{}" in offline mode.'''.format(self.index))
                 self.index.find_packages(source['find-requirement'])
-                distributions = self.requirement_match_list(self.index, source['find-requirement'],
-                                                            requirement_type=self.requirement_type(source))
+                distributions = self.requirement_match_list(
+                    self.index, source['find-requirement'],
+                    requirement_type=self.requirement_type(source))
                 if not distributions:
                     raise UserError('''No distributions available for requirement "{}".'''.format(
                         source['find-egg']))
@@ -183,7 +188,7 @@ class SubRecipe(BaseDownloadSubRecipe):
             if 'source-directory' not in source:
                 self.logger.info("Getting distribution for '{}'.".format(
                     source['requirement'].project_name))
-                super(SubRecipe, self).acquire_source(source, destkey=destkey)
+                super(SetupEggSubRecipe, self).acquire_source(source, destkey=destkey)
         else:
             source['source-directory'] = candidates[0].location
             source['build'] = False
@@ -230,7 +235,7 @@ class SubRecipe(BaseDownloadSubRecipe):
             setup_cmd_fd, setup_cmd = mkstemp(dir=source['source-directory'])
             setup_cmd_fh = os.fdopen(setup_cmd_fd, 'w')
             undo.append(lambda: os.remove(setup_cmd))
-            undo.append(lambda: setup_cmd_fh.close())
+            undo.append(setup_cmd_fh.close)
 
             setup_cmd_fh.write((setup_template % dict(
                 setuptools=setuptools_location,
@@ -270,19 +275,20 @@ class SubRecipe(BaseDownloadSubRecipe):
             return
         env = Environment([source['build-directory']])
         self.recipe.mkdir(source[destkey])
-        for dist_name, dists in [(x, env[x]) for x in env]:
+        for dists in [env[x] for x in env]:
             for src_dist in dists:
-                dst_dist = src_dist.clone(location=os.path.join(source[destkey],
-                                                                "{}.{}".format(src_dist.egg_name(), {
-                                                                    EGG_DIST: 'egg',
-                                                                    DEVELOP_DIST: 'egg-link',
-                                                                }[src_dist.precedence])))
+                dst_dist = src_dist.clone(
+                    location=os.path.join(source[destkey],
+                                          "{}.{}".format(src_dist.egg_name(), {
+                                              EGG_DIST: 'egg',
+                                              DEVELOP_DIST: 'egg-link',
+                                          }[src_dist.precedence])))
                 {
                     EGG_DIST: lambda src, dst:
-                    self.recipe.copy(src, dst)
-                    if os.path.isdir(src) else
-                    self.recipe.extract_archive(src, dst),
-                    DEVELOP_DIST: lambda src, dst: os.rename(src, dst),
+                              self.recipe.copy(src, dst)
+                              if os.path.isdir(src) else
+                              self.recipe.extract_archive(src, dst),
+                    DEVELOP_DIST: os.rename,
                 }[src_dist.precedence](src_dist.location, dst_dist.location)
                 # redo_pyc(newloc)
                 self.working_set.add_entry(dst_dist.location)
@@ -290,7 +296,8 @@ class SubRecipe(BaseDownloadSubRecipe):
                     str(dst_dist.egg_name())))
 
     @classmethod
-    def requirement_match_list(cls, index, requirement, requirement_type=None, prefer_final=True, strip_signature=''):
+    def requirement_match_list(cls, index, requirement, requirement_type=None,
+                               prefer_final=True, strip_signature=''):
         def mangle_candidate(dist):
             if strip_signature:
                 dist = dist.clone(version=re.sub(
@@ -301,11 +308,13 @@ class SubRecipe(BaseDownloadSubRecipe):
         if not candidates:
             return []
         if requirement_type is not None:
-            candidates = [candidate for candidate in candidates if candidate.precedence == requirement_type]
+            candidates = [candidate for candidate in candidates
+                          if candidate.precedence == requirement_type]
         if prefer_final:
             final_candidates = [candidate for candidate in candidates
                                 if not any([(part[:1] == '*')
-                                               and (part not in ('*final-', '*final')) for part in candidate.parsed_version])]
+                                            and (part not in ('*final-', '*final'))
+                                            for part in candidate.parsed_version])]
             if final_candidates:
                 candidates = final_candidates
         best = []
@@ -353,7 +362,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         return "{}_{}".format(SIGNATURE_MARKER, ret)
 
 
-class Recipe(DownloadRecipe):
+class SetupEggRecipe(SetupDownloadRecipe):
     """
     A recipe to build an egg package.
 
@@ -382,10 +391,10 @@ class Recipe(DownloadRecipe):
         dockeroo: Got dummy-0.1-py2.7.
     """
 
-    subrecipe_class = SubRecipe
+    subrecipe_class = SetupEggSubRecipe
 
     def initialize(self):
-        super(Recipe, self).initialize()
+        super(SetupEggRecipe, self).initialize()
         self.working_set = WorkingSet([])
 
     default_location = None

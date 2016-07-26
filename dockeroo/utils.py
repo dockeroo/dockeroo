@@ -16,17 +16,17 @@
 # limitations under the License.
 
 
-from past.builtins import basestring
-from builtins import range
-from builtins import object
-
 from collections import defaultdict
-from decorator import decorate
 from datetime import datetime, timedelta, tzinfo
 import logging
 import random
 import re
 import string
+
+from builtins import range
+from builtins import object
+from decorator import decorate
+from past.builtins import basestring
 from zc.buildout import UserError
 
 
@@ -34,21 +34,32 @@ TRUE_SET = {'true', 'on', 'yes', '1'}
 FALSE_SET = {'false', 'off', 'no', '0'}
 
 
+class ExternalProcessError(RuntimeError):
+
+    def __init__(self, msg, process):
+        full_msg = "{} ({})".format(msg, process.returncode)
+        err = ' '.join(process.stderr.read().splitlines())
+        if err:
+            full_msg = "{}: {}".format(full_msg, err)
+        super(ExternalProcessError, self).__init__(full_msg)
+
+
 class FixedOffset(tzinfo):
 
     def __init__(self, offset=None, name=None):
+        super(FixedOffset, self).__init__()
         if offset is not None:
             self.__offset = timedelta(minutes=offset)
         if name is not None:
             self.__name = name
 
-    def utcoffset(self, dt):
+    def utcoffset(self, dt): # pylint: disable=unused-argument
         return self.__offset
 
-    def tzname(self, dt):
+    def tzname(self, dt): # pylint: disable=unused-argument
         return self.__name
 
-    def dst(self, dt):
+    def dst(self, dt): # pylint: disable=unused-argument
         return timedelta(0)
 
     @classmethod
@@ -151,20 +162,21 @@ class OptionRepository(object):
     def delete(self, key):
         return self[None].delete(key)
 
-def merge(a, b):
-    def merge(a, b):
-        for i in range(max(len(a), len(b))):
-            if i < len(b):
-                yield b[i]
+def merge(lst1, lst2):
+    def _merge(lst1, lst2):
+        for i in range(max(len(lst1), len(lst2))):
+            if i < len(lst2):
+                yield lst2[i]
             else:
-                yield a[i]
-    return list(merge(a, b))
+                yield lst1[i]
+    return list(_merge(lst1, lst2))
 
-def random_name(self, size=8):
-    return ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(size))
+def random_name(size=8):
+    return ''.join(random.SystemRandom().choice(string.ascii_lowercase + \
+                                                string.digits) for _ in range(size))
 
-def quote(s):
-    return '"{}"'.format(s.replace('"', '\\"'))
+def quote(string):
+    return '"{}"'.format(string.replace('"', '\\"'))
 
 def resolve_loglevel(level):
     if not level:
@@ -183,7 +195,7 @@ def resolve_verbosity(verbosity):
     except ValueError:
         raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
-datetime_re = re.compile(
+DATETIME_RE = re.compile(
     r'(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})'
     r'[T ](?P<hour>\d{1,2}):(?P<minute>\d{1,2})'
     r'(?::(?P<second>\d{1,2})(?:\.(?P<microsecond>\d{1,6})\d{0,6})?)?'
@@ -191,7 +203,7 @@ datetime_re = re.compile(
 )
 
 def parse_datetime(value):
-    match = datetime_re.match(value)
+    match = DATETIME_RE.match(value)
     if match:
         kw = match.groupdict()
         if kw['microsecond']:
@@ -216,6 +228,11 @@ def reify(f):
         return f._cache
     return decorate(f, _reify)
 
+def listify(f):
+    def _listify(f, *args, **kwargs):
+        return list(f(*args, **kwargs))
+    return decorate(f, _listify)
+
 def string_as_bool(s):
     if not isinstance(s, basestring):
         return bool(s)
@@ -230,4 +247,3 @@ def string_as_bool(s):
 def uniq(seq):
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
-
