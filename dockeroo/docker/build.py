@@ -16,8 +16,6 @@
 # limitations under the License.
 
 
-import time
-
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
@@ -28,7 +26,7 @@ from dockeroo.utils import merge, string_as_bool
 
 class SubRecipe(BaseDockerSubRecipe):
 
-    def initialize():
+    def initialize(self):
         super(SubRecipe, self).initialize()
 
         if ':' not in self.name:

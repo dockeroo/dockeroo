@@ -857,7 +857,7 @@ class DockerEngine(object):
 
 class BaseDockerSubRecipe(BaseSubRecipe):
 
-    def initialize():
+    def initialize(self):
         super(BaseDockerSubRecipe, self).initialize()
         self.engine = DockerEngine(
             logger=self.logger,

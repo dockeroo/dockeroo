@@ -1,3 +1,5 @@
+from builtins import range
+from builtins import object
 
 # -*- coding: utf-8 -*-
 #
@@ -63,7 +65,7 @@ class RecipeFilterset(object):
         for fltr in self._filters[filter_category]:
             ret = fltr(*args, **kwargs)
             if ret is not None:
-                if continue_on_success == False:
+                if not continue_on_success:
                     return ret
                 else:
                     rets.append(ret)
@@ -75,9 +77,9 @@ class RecipeFilterset(object):
         from warnings import warn
 
         for module_name in \
-            map(lambda entry: os.path.splitext(entry)[0],
-                filter(lambda entry: entry.endswith('.py') and not entry.startswith('__'),
-                       os.listdir(os.path.dirname(base_module.__file__)))):
+            [os.path.splitext(entry)[0] \
+             for entry in [entry for entry in os.listdir(os.path.dirname(base_module.__file__)) \
+             if entry.endswith('.py') and not entry.startswith('__')]]:
 
             try:
                 module = import_module("{}.{}".format(
@@ -85,11 +87,10 @@ class RecipeFilterset(object):
             except Exception as e:
                 warn('''Unable to import module "{}": {}'''.format(module_name, e))
             else:
-                for fltr in filter(lambda entry: inspect.isclass(entry) and
-                                   issubclass(entry, RecipeFilter) and
-                                   hasattr(
-                                       entry, 'filter_category') and entry.filter_category,
-                                   map(lambda entry: getattr(module, entry), dir(module))):
+                for fltr in [entry for entry in [getattr(module, entry) for entry in dir(module)] \
+                    if inspect.isclass(entry) and
+                        issubclass(entry, RecipeFilter) and
+                        hasattr(entry, 'filter_category') and entry.filter_category]:
 
                     FILTERS.append(fltr)
 
@@ -117,7 +118,7 @@ class BaseRecipe(object):
 
     def setup_logging(self):
         self._save_logging = {}
-        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+        for logger in [logging.getLogger(x) for x in self.loggers]:
             self.save_logger(logger)
             logging._acquireLock()
             logger.handlers = [self.log_handler]
@@ -125,7 +126,7 @@ class BaseRecipe(object):
             logger.propagate = False
 
     def restore_logging(self):
-        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+        for logger in [logging.getLogger(x) for x in self.loggers]:
             self.restore_logger(logger)
 
     def save_logger(self, logger):
@@ -146,7 +147,7 @@ class BaseRecipe(object):
 
     def set_logging(self, fmt, level, verbosity=0):
         self.log_handler.setFormatter(logging.Formatter(fmt))
-        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+        for logger in [logging.getLogger(x) for x in self.loggers]:
             logger.setLevel(level - verbosity)
 
     @property
@@ -202,8 +203,10 @@ class BaseRecipe(object):
     def default_working_directory(self):
         return os.path.join(
             self.buildout['buildout']['parts-directory'],
-            "{}.workdir{}".format(self.name,
-                                  ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))))
+            "{}.workdir{}".format(
+                self.name,
+                ''.join(random.choice(string.ascii_letters + string.digits) \
+                    for _ in range(8))))
 
     @property
     @reify
@@ -246,19 +249,20 @@ class BaseRecipe(object):
         if self.uninstall_script is not None:
             self.uninstall = self.uninstall_wrapper
 
-    def download(self, url, params={}, force=False):
-        return self.filterset('download', [url.strip()], {'params': params, 'force': force})
+    def download(self, url, params=None, force=False):
+        return self.filterset('download', [url.strip()], {'params': params or {}, 'force': force})
 
-    def extract_archive(self, src, dst, params={}):
-        return self.filterset('extract.archive', [src.strip(), dst], {'params': params})
+    def extract_archive(self, src, dst, params=None):
+        return self.filterset('extract.archive', [src.strip(), dst], {'params': params or {}})
 
-    def extract_scm(self, repo_type, src, dst, params={}):
-        return self.filterset('extract.scm', [repo_type, src.strip(), dst], {'params': params})
+    def extract_scm(self, repo_type, src, dst, params=None):
+        return self.filterset('extract.scm', [repo_type, src.strip(), dst], {'params': params or {}})
 
     @property
     @reify
     def locations(self):
-        return uniq(filter(None, [self.default_location] + getattr(self, 'extra_locations', [])))
+        return uniq([_f for _f in [self.default_location] +
+                     getattr(self, 'extra_locations', []) if _f])
 
     @property
     @reify
@@ -280,7 +284,7 @@ class BaseRecipe(object):
             if callable(self.install_script):
                 self.install_script()
             else:
-                exec self.install_script
+                exec(self.install_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -288,11 +292,10 @@ class BaseRecipe(object):
         finally:
             if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
                 for f in self.cleanup_paths:
-                    self.logger.info(
-                        '''Left path "{}" as requested'''.format(f))
+                    self.logger.info('Left path "%s" as requested', f)
             else:
                 for f in self.cleanup_paths:
-                    self.logger.debug('''Cleaning up "{}"'''.format(f))
+                    self.logger.debug('Cleaning up "%s"', f)
                     self.rm(f)
         specs = self.options.get('specs', default=None)
         if specs is not None:
@@ -311,7 +314,7 @@ class BaseRecipe(object):
             if callable(self.update_script):
                 self.update_script()
             else:
-                exec self.update_script
+                exec(self.update_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -338,7 +341,7 @@ class BaseRecipe(object):
             if callable(self.uninstall_script):
                 self.uninstall_script()
             else:
-                exec self.uninstall_script
+                exec(self.uninstall_script)
         except Exception as e:
             exc = e
             self.restore_logging()
@@ -400,7 +403,7 @@ class BaseRecipe(object):
         except (shutil.Error, OSError) as error:
             try:
                 shutil.rmtree(destination, ignore_errors=True)
-            except (shutil.Error, OSError), strerror:
+            except (shutil.Error, OSError) as strerror:
                 self.logger.error(
                     '''Error occurred when cleaning after error: "{}"'''.format(strerror))
             raise error
@@ -525,7 +528,7 @@ class BaseSubRecipe(object):
     def environment(self):
         config = self.environment_config.copy()
         env = {}
-        for k, v in os.environ.iteritems():
+        for k, v in os.environ.items():
             change = config.pop(k, None)
             if change is not None:
                 env[k] = change % os.environ
@@ -533,7 +536,7 @@ class BaseSubRecipe(object):
                     '''Environment "{}" set to "{}"'''.format(k, env[k]))
             else:
                 env[k] = v
-        for k, v in config.iteritems():
+        for k, v in config.items():
             self.logger.info(
                 '''Environment "{}" added with "{}"'''.format(k, v))
             env[k] = v
@@ -577,15 +580,14 @@ class BaseGroupRecipe(BaseRecipe):
     @property
     @reify
     def locations(self):
-        return uniq(filter(None, chain(*map(lambda x:
-                                            [x.location] +
-                                            getattr(x, 'extra_locations', []),
-                                            self.subrecipes.values()))))
+        return uniq([_f for _f in
+                     chain(*[[x.location] + getattr(x, 'extra_locations', [])
+                             for x in self.subrecipes.values()]) if _f])
 
     @property
     @reify
     def working_directories(self):
-        return uniq(map(lambda x: x.working_directory, self.subrecipes.values()))
+        return uniq([x.working_directory for x in self.subrecipes.values()])
 
     def initialize(self):
         self.update = self.update_wrapper
@@ -597,7 +599,7 @@ class BaseGroupRecipe(BaseRecipe):
             if callable(attr):
                 attr(*args, **kwargs)
             else:
-                exec attr
+                exec(attr)
 
     def install_script(self):
         return self.script('install')

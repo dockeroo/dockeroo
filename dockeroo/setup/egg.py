@@ -1,3 +1,4 @@
+from builtins import str
 
 # -*- coding: utf-8 -*-
 #
@@ -80,7 +81,7 @@ class SubRecipe(BaseDownloadSubRecipe):
     def source_key_processors(self):
         return {
             'egg': lambda x: [('egg', x.strip())],
-            'eggs': lambda x: map(lambda y: ('egg', y.strip()), x.splitlines()),
+            'eggs': lambda x: [('egg', y.strip()) for y in x.splitlines()],
         }
 
     @property
@@ -90,8 +91,8 @@ class SubRecipe(BaseDownloadSubRecipe):
         ret.update({
             'build': lambda x: string_as_bool(x),
             'build-dependencies': lambda x: string_as_bool(x),
-            'extra-paths': lambda x: map(lambda x: x.strip(), x.splitlines()),
-            'egg-path': lambda x: map(lambda x: x.strip(), x.splitlines()),
+            'extra-paths': lambda x: [x.strip() for x in x.splitlines()],
+            'egg-path': lambda x: [x.strip() for x in x.splitlines()],
         })
         return ret
 
@@ -146,8 +147,7 @@ class SubRecipe(BaseDownloadSubRecipe):
         source['egg-environment'] = Environment(source['egg-path'])
         source['build-options'] = {}
         if not dependency:
-            for src_key, dst_key in map(lambda key: (key, re.sub('-', '_', key)),
-                                        filter(lambda option: option in BUILD_EXT_OPTIONS, self.options)):
+            for src_key, dst_key in [(key, re.sub('-', '_', key)) for key in [option for option in self.options if option in BUILD_EXT_OPTIONS]]:
                 source['build-options'][dst_key] = self.options[src_key]
         source.setdefault('signature', self.resolve_signature(source))
 
@@ -271,7 +271,7 @@ class SubRecipe(BaseDownloadSubRecipe):
             return
         env = Environment([source['build-directory']])
         self.recipe.mkdir(source[destkey])
-        for dist_name, dists in map(lambda x: (x, env[x]), env):
+        for dist_name, dists in [(x, env[x]) for x in env]:
             for src_dist in dists:
                 dst_dist = src_dist.clone(location=os.path.join(source[destkey],
                                                                 "{}.{}".format(src_dist.egg_name(), {
@@ -302,12 +302,11 @@ class SubRecipe(BaseDownloadSubRecipe):
         if not candidates:
             return []
         if requirement_type is not None:
-            candidates = filter(
-                lambda candidate: candidate.precedence == requirement_type, candidates)
+            candidates = [candidate for candidate in candidates if candidate.precedence == requirement_type]
         if prefer_final:
             final_candidates = [candidate for candidate in candidates
-                                if not any(map(lambda part: (part[:1] == '*')
-                                               and (part not in ('*final-', '*final')), candidate.parsed_version))]
+                                if not any([(part[:1] == '*')
+                                               and (part not in ('*final-', '*final')) for part in candidate.parsed_version])]
             if final_candidates:
                 candidates = final_candidates
         best = []

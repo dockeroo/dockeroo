@@ -1,3 +1,5 @@
+from future import standard_library
+standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
 #
@@ -18,10 +20,8 @@
 
 from collections import defaultdict
 import os
-import shlex
-import shutil
-from urllib import pathname2url
-from urlparse import urljoin
+from urllib.request import pathname2url
+from urllib.parse import urljoin
 from zc.buildout import UserError
 
 from dockeroo.setup.source import BaseSourceRecipe, BaseSourceSubRecipe
@@ -36,7 +36,7 @@ class BaseDownloadSubRecipe(BaseSourceSubRecipe):
         ret = super(BaseDownloadSubRecipe, self).source_key_processors.copy()
         ret.update({
             'url': lambda x: [('url', x.strip())],
-            'urls': lambda x: map(lambda y: ('url', y), x.split()),
+            'urls': lambda x: [('url', y) for y in x.split()],
         })
         return ret
 

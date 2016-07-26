@@ -16,10 +16,8 @@
 # limitations under the License.
 
 
-import os
 from shellescape import quote
 import shutil
-import tarfile
 import tempfile
 
 from dockeroo import BaseGroupRecipe
@@ -29,7 +27,7 @@ from dockeroo.utils import merge, string_as_bool
 
 class SubRecipe(BaseDockerSubRecipe):
 
-    def initialize():
+    def initialize(self):
         super(SubRecipe, self).initialize()
 
         self.archives = []
@@ -129,7 +127,7 @@ class SubRecipe(BaseDockerSubRecipe):
             self.run_cmd(self.build_container, "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\"".format(arch=self.arch,
                                                                                                                                            packages=' '.join(
                                                                                                                                                self.build_dependencies + self.packages),
-                                                                                                                                           env=' '.join(['='.join(x) for x in list(self.build_env.items())])))
+                                                                                                                                           env=' '.join(['='.join(x) for x in self.build_env.items()])))
             package_atoms = ["={}".format(self.run_cmd(self.build_container,
                                                                           "chroot-{arch}-docker -c \"equery list --format=\"\\$cpv\" {package}\" | head -1".format(
                                                                               arch=self.arch, package=package),

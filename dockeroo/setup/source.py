@@ -1,3 +1,7 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.builtins import basestring
 
 # -*- coding: utf-8 -*-
 #
@@ -19,11 +23,9 @@
 from collections import defaultdict
 import os
 import random
-import shlex
-import shutil
 import string
-from urllib import pathname2url
-from urlparse import urljoin
+from urllib.request import pathname2url
+from urllib.parse import urljoin
 from zc.buildout import UserError
 
 from dockeroo import BaseGroupRecipe, BaseSubRecipe
@@ -50,16 +52,15 @@ class BaseSourceSubRecipe(BaseSubRecipe):
                 if callable(processor):
                     self.common_options[option_name] = processor(option)
         if getattr(self, 'allowed_options', None) is not None:
-            options = dict(filter(lambda (k, v):
-                                  k in self.allowed_options, options.items()))
+            options = dict([k_v for k_v in options.items() if k_v[0] in self.allowed_options])
         self.common_options.update(options)
-        for source in list(self.sources):
+        for source in self.sources:
             self.populate_source(source)
 
     def install(self):
-        for source in list(self.sources):
+        for source in self.sources:
             self.prepare_source(source)
-        for source in list(self.sources):
+        for source in self.sources:
             self.process_source(source)
 
     def update(self):
@@ -74,7 +75,7 @@ class BaseSourceSubRecipe(BaseSubRecipe):
     def source_key_processors(self):
         return {
             'path': lambda x: [('path', x.strip())],
-            'paths': lambda x: map(lambda y: ('path', y), x.split()),
+            'paths': lambda x: [('path', y) for y in x.split()],
         }
 
     @property

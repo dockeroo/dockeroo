@@ -16,8 +16,6 @@
 # limitations under the License.
 
 
-import logging
-import os
 from collections import defaultdict
 from itertools import chain
 from tempfile import mkdtemp, mkstemp

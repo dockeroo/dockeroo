@@ -17,10 +17,6 @@
 
 
 import os
-from shellescape import quote
-import shutil
-import tarfile
-import tempfile
 
 from dockeroo import BaseGroupRecipe
 from dockeroo.docker import BaseDockerSubRecipe
@@ -29,7 +25,7 @@ from dockeroo.utils import merge, string_as_bool
 
 class SubRecipe(BaseDockerSubRecipe):
 
-    def initialize():
+    def initialize(self):
         super(SubRecipe, self).initialize()
 
         self.build_command = self.options.get('build-command', "/bin/freeze")

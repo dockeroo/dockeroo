@@ -16,12 +16,6 @@
 # limitations under the License.
 
 
-import os
-from shellescape import quote
-import shutil
-import tarfile
-import tempfile
-
 from dockeroo import BaseGroupRecipe
 from dockeroo.docker import BaseDockerSubRecipe
 from dockeroo.utils import merge
@@ -29,7 +23,7 @@ from dockeroo.utils import merge
 
 class SubRecipe(BaseDockerSubRecipe):
 
-    def initialize():
+    def initialize(self):
         super(SubRecipe, self).initialize()
 
         self.container_from = self.options['container-from']
