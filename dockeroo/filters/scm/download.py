@@ -1,3 +1,5 @@
+from future import standard_library
+standard_library.install_aliases()
 
 # -*- coding: utf-8 -*-
 # 
@@ -18,7 +20,7 @@
 
 import os
 from tempfile import mkdtemp
-from urlparse import urlparse, ParseResult, parse_qs
+from urllib.parse import urlparse, ParseResult, parse_qs
 from zc.buildout import UserError
 
 from dockeroo.filters import RecipeFilter
@@ -66,7 +68,7 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             'download-mode': 'scm',
             'repository-type': repo_type,
         }
-        d.update(dict(map(lambda (k, v): ('repository-{}'.format(k), v), fragment_params.items())))
+        d.update(dict([('repository-{}'.format(k), v) for k, v in list(fragment_params.items())]))
         ret = func(urlobj, path, params=params or {}, force=force)
         if isinstance(ret, dict):
             d.update(ret)

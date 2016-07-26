@@ -16,8 +16,8 @@
 # limitations under the License.
 
 
+from builtins import object
 from subprocess import CalledProcessError
-
 from zc.buildout import UserError
 
 
@@ -29,7 +29,7 @@ class GitRecipeFilterMixin(object):
             command.append('-q')
         command += args
         command_line = ' '.join(command)
-        self.logger.info('''Running command: {}'''.format(command_line))
+        self.logger.info('Running command: %s', command_line)
         if 'env' not in kwargs:
             kwargs['env'] = {}
         kwargs['env'].setdefault('LC_ALL', 'C')

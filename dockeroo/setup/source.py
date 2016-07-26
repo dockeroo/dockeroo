@@ -49,7 +49,7 @@ class BaseSourceSubRecipe(BaseSubRecipe):
                 if callable(processor):
                     self.common_options[option_name] = processor(option)
         if getattr(self, 'allowed_options', None) is not None:
-            options = dict([k_v for k_v in options.items() if k_v[0] in self.allowed_options])
+            options = dict([(k, v) for k, v in options.items() if k in self.allowed_options])
         self.common_options.update(options)
         for source in self.sources:
             self.populate_source(source)
