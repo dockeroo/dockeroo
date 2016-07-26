@@ -22,14 +22,15 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerRecipe
-from dockeroo.utils import merge
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.utils import merge, string_as_bool
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
         self.build_command = self.options.get('build-command', "/bin/freeze")
         self.build_container = "{}_build".format(self.name)
@@ -48,8 +49,7 @@ class Recipe(DockerRecipe):
 
         self.platform = self.options.get('platform', self.machine.platform)
         self.arch = self.options.get('arch', self.platform)
-        self.tty = self.options.get('tty', 'false').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.tty = string_as_bool(self.options.get('tty', False))
 
     def install(self):
         self.location = self.options.get("location", os.path.join(
@@ -82,3 +82,7 @@ class Recipe(DockerRecipe):
 
     def uninstall(self):
         self.remove_container(self.build_container)
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe

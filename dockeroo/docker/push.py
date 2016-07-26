@@ -22,13 +22,14 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerRecipe
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
         self.username = self.options['username']
         self.password = self.options['password']
@@ -48,3 +49,7 @@ class Recipe(DockerRecipe):
 
     def uninstall(self):
         pass
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe

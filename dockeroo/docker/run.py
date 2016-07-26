@@ -22,20 +22,21 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerRecipe
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.utils import string_as_bool
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
         self.image = self.options['image']
         self.command = self.options.get('command', None)
         self.user = self.options.get('user', None)
         self.layout = self.options.get('layout', None)
-        self.tty = self.options.get('tty', 'false').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.tty = string_as_bool(self.options.get('tty', False))
         self.env = dict([y for y in [x.strip().split(
             '=') for x in self.options.get('env', '').split('\n')] if y[0]])
         self.ports = dict([y for y in [x.strip().split(
@@ -50,8 +51,7 @@ class Recipe(DockerRecipe):
         self.script_user = self.options.get('script-user', None)
         self.script = "#!{}\n{}".format(self.script_shell, '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) \
             if self.options.get('script', None) is not None else None
-        self.start = self.options.get('start', 'true').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.start = string_as_bool(self.options.get('start', True))
 
     def install(self):
         self.remove_container(self.name)
@@ -84,3 +84,7 @@ class Recipe(DockerRecipe):
 
     def uninstall(self):
         self.remove_container(self.name)
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe

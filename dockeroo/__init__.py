@@ -1,14 +1,14 @@
 
 # -*- coding: utf-8 -*-
-# 
+#
 # Copyright (c) 2016, Giacomo Cariello. All rights reserved.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,791 +16,138 @@
 # limitations under the License.
 
 
-from __future__ import absolute_import
-from future import standard_library
-standard_library.install_aliases()
-from builtins import next
-from builtins import map
-from builtins import str
-from builtins import object
-
-import base64
-from copy import deepcopy
-from collections import namedtuple
-from datetime import datetime
-from distutils.dir_util import copy_tree
-from io import StringIO
-import json
+from collections import defaultdict
+import errno
+from importlib import import_module
+from itertools import chain
 import logging
 import os
-import platform
+from platform import uname
 import random
-import re
-from shellescape import quote
-from shutil import rmtree
+from select import select
+import shlex
+import shutil
 import string
-from subprocess import Popen, PIPE, STDOUT
-import tarfile
-import tempfile
-import time
-import tzlocal
+import subprocess
+import sys
+
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
-from dockeroo.utils import mkdir, reify, parse_datetime
+from dockeroo import filters
+from dockeroo.filters import scm as filters_scm
+from dockeroo.filters import RecipeFilter
+from dockeroo.utils import OptionRepository, reify
+from dockeroo.utils import resolve_loglevel, resolve_verbosity
+from dockeroo.utils import string_as_bool, uniq
 
 
-logging.getLogger(
-    "requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
-
-DEFAULT_TIMEOUT = 180
-
-FNULL = open(os.devnull, 'w')
+FILTERS = []
 
 
-class DockerError(RuntimeError):
+class RecipeFilterset(object):
+    _filters = defaultdict(list)
 
-    def __init__(self, msg, process):
-        full_msg = "{} ({})".format(msg, process.returncode)
-        err = ' '.join(process.stderr.read().split(os.linesep))
-        if err:
-            full_msg = "{}: {}".format(full_msg, err)
-        return super(DockerError, self).__init__(full_msg)
+    def __init__(self, recipe):
+        self.recipe = recipe
+        for flt in FILTERS:
+            self.add(flt)
 
+    def add(self, cls):
+        self._filters[cls.filter_category].append(cls(self.recipe))
 
-class Archive(object):
-
-    def __init__(self, url=None, path=None, prefix=None, md5sum=None):
-        self.url = url
-        self.path = path
-        self.prefix = prefix
-        self.md5sum = md5sum
-
-    def download(self, buildout):
-        download = Download(buildout['buildout'], hash_name=False)
-        self.path, is_temp = download(self.url, md5sum=self.md5sum)
-
-    def __repr__(self):
-        return self.url or self.path
-
-
-class DockerProcess(Popen):
-
-    def __init__(self, engine, args, stdin=None, stdout=None, stderr=PIPE, env={}, config=None):
-        self.engine = engine
-        args = ['docker'] + args
-        if config is not None:
-            args = ['--config', config] + args
-        custom_env = os.environ.copy()
-        custom_env.update(engine.client_environment)
-        custom_env.update(env)
-        self.engine.logger.debug("Running command: %s", ' '.join(args))
-        return super(DockerProcess, self).__init__(
-            args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, env=custom_env)
-
-
-class DockerMachineProcess(Popen):
-
-    def __init__(self, args, stdin=None, stdout=None):
-        args = ['docker-machine'] + args
-        return super(DockerMachineProcess, self).__init__(
-            args, stdin=stdin, stdout=stdout, stderr=PIPE, close_fds=True)
-
-
-class DockerRegistryLogin(object):
-
-    def __init__(self, engine, registry, username, password):
-        self.engine = engine
-        self.registry = "https://{}/v1/".format(registry)
-        self.username = username
-        self.password = password
-
-    def __enter__(self):
-        self.config_path = tempfile.mkdtemp()
-        p = DockerProcess(self.engine,
-                          ['login', '-u', self.username, '-p', self.password, self.registry],
-                          config=self.config_path)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker login {}\"".format(self.registry), p)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        rmtree(self.config_path)
-
-
-class DockerMachine(object):
-    def __init__(self, name):
-        self.name = name
-
-    @reify
-    def platform(self):
-        return self.run_cmd("uname -m", quiet=True, return_output=True)
-
-    @reify
-    def url(self):
-        p = DockerMachineProcess(['url', self.name], stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker-machine url {}\"".format(self.name), p)
-        return p.stdout.read().rstrip(os.linesep)
-
-    @reify
-    def inspect(self):
-        p = DockerMachineProcess(['inspect', self.name], stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker-machine inspect {}\"".format(self.name), p)
-        return json.loads(p.stdout.read())
-
-    def run_cmd(self, cmd, quiet=False, return_output=False):
-        if not quiet:
-            self.logger.info("Running command \"%s\" on machine \"%s\"", cmd, self.name)
-        args = ['ssh', self.name, cmd]
-        p = DockerMachineProcess(args, stdout=PIPE if return_output else None)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error running command \"{}\" on machine \"{}\"".format(cmd, self.name), p)
-        if return_output:
-            return p.stdout.read().strip()
-
-
-class DockerEngine(object):
-
-    def __init__(self, machine_name=None, logger=None, shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
-        self.machine = DockerMachine(name=machine_name if machine_name is not None \
-            else os.environ.get('DOCKER_MACHINE_NAME', 'default'))
-        self.logger = logging.getLogger(logger or self.machine.name)
-        self.shell = shell
-        self.timeout = timeout
-
-    @reify
-    def client_environment(self):
-        return {
-            'DOCKER_TLS_VERIFY': str(int(self.machine.inspect['HostOptions']['EngineOptions']['TlsVerify'])),
-            'DOCKER_HOST': self.machine.url,
-            'DOCKER_CERT_PATH': self.machine.inspect['HostOptions']['AuthOptions']['StorePath'].encode('utf-8'),
-            'DOCKER_MACHINE_NAME': self.machine.name,
-        }
-
-    @reify
-    def client_version(self):
-        p = DockerProcess(self, ['version', '-f', '{{.Client.Version}}'], stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting version", p)
-        return p.stdout.read().rstrip(os.linesep)
-
-    def build_dockerfile(self, tag, path, **kwargs):
-        self.logger.info("Building Dockerfile from context \"%s\"", path)
-        args = ['build', '-t', tag]
-        for k, v in kwargs.items():
-            args += ['--build-arg', '{}={}'.format(k, v)]
-        args.append(path)
-        p = DockerProcess(self, args)
-        if p.wait() != 0:
-            raise DockerError("Error building Dockerfile from context \"{}\"".format(path), p)
-
-    def clean_stale_images(self):
-        for image in self.images(dangling='true'):
-            self.remove_image(image['image'])
-        for image in self.images('<none>'):
-            self.remove_image(image['image'])
-
-    def commit_container(self, container, image, command=None, user=None, labels={}, expose=[], volumes=[]):
-        self.logger.info(
-            "Committing container \"%s\" to image \"%s\"", container, image)
-        args = ['commit']
-        if command:
-            args.append(
-                "--change='CMD [{}]'".format(', '.join(['"{}"'.format(x) for x in command.split()])))
-        if user:
-            args.append("--change='USER \"{}\"'".format(user))
-        for k, v in labels.items():
-            args.append("--change='LABEL \"{}\"=\"{}\"".format(k, v))
-        for port in expose:
-            args.append("--change='EXPOSE {}'".format(port))
-        if volumes:
-            args.append(
-                "--change='VOLUME [{}]'".format(', '.join(['"{}"'.format(x) for x in volumes])))
-        args += [container, image]
-        p = DockerProcess(self, args, stdout=FNULL)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error committing container \"{}\"".format(container), p)
-
-    def config_binfmt(self, container, platform):
-        self.run_cmd(
-            container, '[ -f /proc/sys/fs/binfmt_misc/register ] || mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc', privileged=True)
-        self.run_cmd(container, '[ -f /proc/sys/fs/binfmt_misc/{platform} ] || echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(platform=platform, binfmt={
-            'aarch64': r':{platform}:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'arm':     r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'armeb':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'alpha':   r':{platform}:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x26\x90:\xff\xff\xff\xff\xff\xfe\xfe\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'mips':    r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'mipsel':  r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'ppc':     r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x14:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'sh4':     r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfb\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'sh4eb':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'sparc':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x02:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-        }[platform].format(platform=platform)), privileged=True)
-
-    def containers(self, all=False, **filters):
-        SEP = '|'
-        params = ['ID', 'Image', 'Command', 'CreatedAt', 'RunningFor',
-                  'Ports', 'Status', 'Size', 'Names', 'Labels', 'Mounts']
-        args = ['ps', '--format',
-                SEP.join(['{{{{.{}}}}}'.format(x) for x in params])]
-        if all:
-            args.append('-a')
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
-        p = DockerProcess(self, args, stdout=PIPE)
-        for line in p.stderr.read().split(os.linesep)[:-1]:
-            self.logger.error(line)
-        p.wait()
-        params_map = dict([(x, re.sub(
-            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
-        ret = []
-        for line in p.stdout.read().split(os.linesep)[:-1]:
-            d = {}
-            values = line.split(SEP)
-            for n, param in enumerate(params):
-                if param in ['Labels', 'Mounts', 'Names', 'Ports']:
-                    d[params_map[param]] = values[n].split(',') if values[
-                        n] else []
-                    if param == 'Labels':
-                        d[params_map[param]] = [tuple(
-                            x.split('=')) for x in d[params_map[param]]]
-                    elif param == 'Ports':
-                        d[params_map[param]] = [tuple(
-                            x.split('->')) for x in d[params_map[param]]]
-                elif param == 'Status':
-                    d[params_map[param]] = {
-                        'created': 'created',
-                        'dead': 'dead',
-                        'exited': 'exited',
-                        'paused': 'paused',
-                        'restarting': 'restarting',
-                        'up': 'running',
-                    }[values[n].split(' ')[0].lower()]
-                elif param == 'CreatedAt':
-                    d[params_map[param]] = parse_datetime(values[n]).astimezone(
-                        tzlocal.get_localzone()).replace(tzinfo=None)
+    def __call__(self, filter_category, args=None, kwargs=None, continue_on_success=False):
+        args = args or []
+        kwargs = kwargs or {}
+        rets = []
+        for fltr in self._filters[filter_category]:
+            ret = fltr(*args, **kwargs)
+            if ret is not None:
+                if continue_on_success == False:
+                    return ret
                 else:
-                    d[params_map[param]] = values[n] if values[n] else None
-            ret.append(d)
-        return ret
+                    rets.append(ret)
+        return rets or None
 
-    def copy_image_to_container(self, image, container, src, dst):
-        tmp = self.get_random_name()
-        self.create_container(tmp, image)
-        self.copy_path(tmp, container, src, dst=dst, dst_exec=True)
-        self.remove_container(tmp)
+    @classmethod
+    def preload_filters(cls, base_module):
+        import inspect
+        from warnings import warn
 
-    def copy_layout(self, src, dst):
-        self.logger.info("Copying layout \"%s\" on \"%s\"", src, dst)
-        return copy_tree(src, dst)
+        for module_name in \
+            map(lambda entry: os.path.splitext(entry)[0],
+                filter(lambda entry: entry.endswith('.py') and not entry.startswith('__'),
+                       os.listdir(os.path.dirname(base_module.__file__)))):
 
-    def copy_path(self, container_src, container_dst, src, dst=None, dst_exec=False):
-        if dst is None:
-            dst = os.path.join(*os.path.dirname(src).split(os.sep))
-        self.logger.info("Copying files from container \"%s:%s\" to container \"%s:/%s\"",
-                         container_src, src, container_dst, dst)
-        if src.endswith('/'):
-            src_prefix = os.path.dirname(src).split(os.sep)[-1] + '/'
-        else:
-            src_prefix = ''
-
-        def layout_filter(f):
-            if dst is not None:
-                if len(f.name) > len(src_prefix):
-                    f.name = os.path.join(dst, f.name[len(src_prefix):])
-                else:
-                    f.name = dst
-                if f.type == tarfile.LNKTYPE:
-                    if len(f.linkname) > len(src_prefix):
-                        f.linkname = os.path.join(
-                            dst, f.linkname[len(src_prefix):])
-                    else:
-                        f.linkname = dst
-            return f
-        p_in = DockerProcess(self, ['cp', "{}:{}".format(
-            container_src, src), "-"], stdout=PIPE)
-        if dst_exec:
-            p_out = DockerProcess(self, ['exec', '-i', container_dst, "tar", "-xpf",
-                           "-", "-C", "/"], stdin=PIPE)
-        else:
-            p_out = DockerProcess(self, ['cp', "-", "{}:/".format(container_dst)], stdin=PIPE)
-        tar_in = tarfile.open(fileobj=p_in.stdout, mode='r|')
-        tar_out = tarfile.open(fileobj=p_out.stdin, mode='w|')
-        for tarinfo in tar_in:
-            tarinfo = layout_filter(tarinfo)
-            if tarinfo.isreg():
-                tar_out.addfile(tarinfo, fileobj=tar_in.extractfile(tarinfo))
+            try:
+                module = import_module("{}.{}".format(
+                    base_module.__name__, module_name))
+            except Exception as e:
+                warn('''Unable to import module "{}": {}'''.format(module_name, e))
             else:
-                tar_out.addfile(tarinfo)
-        tar_in.close()
-        tar_out.close()
-        p_in.stdout.close()
-        p_out.stdin.close()
-        if p_in.wait() != 0:
-            raise DockerError("Error processing path on container \"{}\"".format(container_src), p_in)
-        if p_out.wait() != 0:
-            raise DockerError(
-                "Error processing path on container \"{}\"".format(container_dst), p_out)
+                for fltr in filter(lambda entry: inspect.isclass(entry) and
+                                   issubclass(entry, RecipeFilter) and
+                                   hasattr(
+                                       entry, 'filter_category') and entry.filter_category,
+                                   map(lambda entry: getattr(module, entry), dir(module))):
 
-    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False,
-                         volumes=None, volumes_from=None, user=None, networks=[], links={},
-                         network_aliases=[], env={}, ports={}):
-        if not any([x for x in self.containers(all=True) if container in x['names']]):
-            self.logger.info("Creating container \"%s\"", container)
-            args = ['create', '--name="{}"'.format(container)]
-            for k, v in env.items():
-                args += ['-e', "{}={}".format(k, v)]
-            for k, v in ports.items():
-                args += ['-p', "{}:{}".format(k, v)]
-            for k, v in links.items():
-                args += ['--link', "{}:{}".format(k, v)]
-            for network in networks:
-                args += ['--network', network]
-            for network_alias in network_aliases:
-                args += ['--network-alias', network_alias]
-            if privileged:
-                args.append('--privileged')
-            if tty:
-                args.append('--tty')
-            if user:
-                args += ['-u', user]
-            if volumes:
-                args += ["--volume={}:{}".format(v[0], v[1]) for v in volumes]
-            if volumes_from:
-                args.append("--volumes-from={}".format(volumes_from))
-            args.append(image)
-            if command:
-                args += command.split(" ")
-            p = DockerProcess(self, args, stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error creating container \"{}\"".format(container), p)
-        if run:
-            self.start_container(container)
+                    FILTERS.append(fltr)
 
-    def create_network(self, network, driver='bridge', gateway=None, subnet=None, ip_range=None, ipv6=False, internal=False):
-        self.logger.info("Creating network \"%s\"", network)
-        args = ['network', 'create', '-d', driver]
-        if gateway is not None:
-            args += ['--gateway', gateway]
-        if ip_range is not None:
-            args += ['--ip-range', ip_range]
-        if subnet is not None:
-            args += ['--subnet', subnet]
-        if ipv6:
-            args.append('--ipv6')
-        if internal:
-            args.append('--internal')
-        args.append(network)
-        p = DockerProcess(self, args)
-        if p.wait() != 0:
-            raise DockerError("Error creating network \"{}\"".format(network), p)
-
-    def create_volume(self, volume):
-        if self.volumes(name=volume):
-            return
-        self.logger.info("Creating volume \"%s\"", volume)
-        args = ['volume', 'create', '--name="{}"'.format(volume)]
-        p = DockerProcess(self, args, stdout=FNULL)
-        if p.wait() != 0:
-            raise DockerError("Error creating volume \"{}\"".format(volume), p)
-
-    def export_files(self, container, src, dst):
-        self.logger.info(
-            "Export files from \"%s:%s\" to path \"%s\"", container, src, dst)
-        args = ['cp', "{}:{}".format(container, src), "-"]
-        p = DockerProcess(self, args, stdout=PIPE)
-        tar = tarfile.open(fileobj=p.stdout, mode='r|')
-        for fin in tar:
-            if not fin.isreg():
-                continue
-            fout = open(os.path.join(dst, os.path.basename(fin.name)), 'w')
-            fout.write(tar.extractfile(fin).read())
-            fout.close()
-        tar.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error exporting files from container \"{}\"".format(container), p)
-
-    def get_random_name(self, size=8):
-        return ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(size))
-
-    def get_container_ip_address(self, container):
-        args = ['inspect', '--format="{{.NetworkSettings.IPAddress}}"', container]
-        p = DockerProcess(self, args, stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error requesting \"docker inspect {}\"".format(container), p)
-        return p.stdout.read().rstrip(os.linesep)
-
-    def images(self, name=None, **filters):
-        SEP = '|'
-        params = ['ID', 'Repository', 'Tag', 'Digest',
-                  'CreatedSince', 'CreatedAt', 'Size']
-        args = ['images', '--format',
-                SEP.join(['{{{{.{}}}}}'.format(x) for x in params])]
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
-        if name is not None:
-            args.append(name)
-        p = DockerProcess(self, args, stdout=PIPE)
-        for line in p.stderr.read().split(os.linesep)[:-1]:
-            self.logger.error(line)
-        p.wait()
-        params_map = dict([(x, re.sub(
-            '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
-        ret = []
-        for line in p.stdout.read().split(os.linesep)[:-1]:
-            d = {}
-            values = line.split(SEP)
-            for n, param in enumerate(params):
-                if param == 'CreatedAt':
-                    d[params_map[param]] = parse_datetime(values[n]).astimezone(
-                        tzlocal.get_localzone()).replace(tzinfo=None)
-                else:
-                    d[params_map[param]] = values[n] if values[
-                        n] and values[n] != '<none>' else None
-            if d['repository'] and d['tag']:
-                d['image'] = "{}:{}".format(d['repository'], d['tag'])
-            else:
-                d['image'] = d['id']
-            ret.append(d)
-        return ret
-
-    def import_archives(self, image, *archives):
-        paths = set()
-        args = ['import', '-', image]
-        p = DockerProcess(self, args, stdin=PIPE)
-        tar_out = tarfile.open(fileobj=p.stdin, mode='w|')
-        for archive in archives:
-            self.logger.info("Importing archive \"%s\" into image \"%s:%s\"",
-                             archive, image, archive.prefix or '/')
-
-            def layout_filter(f):
-                if not f.name.startswith(os.sep):
-                    f.name = "/{}".format(f.name)
-                f.name = os.path.normpath(f.name)
-                if archive.prefix:
-                    f.name = os.path.join(
-                        archive.prefix, f.name.lstrip(os.sep))
-                if f.name.endswith('/') and len(f.name) > 1:
-                    f.name = f.name[:-1]
-                if f.type == tarfile.LNKTYPE and f.linkname:
-                    if f.linkname.startswith(".{}".format(os.sep)):
-                        f.linkname = f.linkname[1:]
-                    if f.linkname.startswith(os.sep) and archive.prefix:
-                        f.linkname = os.path.join(
-                            archive.prefix, f.linkname.lstrip(os.sep))
-                    if f.linkname.endswith('/') and len(f.linkname) > 1:
-                        f.linkname = f.linkname[:-1]
-                return f
-            tar_in = tarfile.open(name=archive.path, mode='r')
-            if archive.prefix:
-                d = [os.sep]
-                for s in os.path.dirname(archive.prefix).split(os.sep):
-                    d.append(s)
-                    path = os.path.join(*d)
-                    if path in paths:
-                        continue
-                    tarinfo = tarfile.TarInfo(path)
-                    tarinfo.mode = 0o755
-                    tarinfo.uid = 0
-                    tarinfo.gid = 0
-                    tarinfo.type = tarfile.DIRTYPE
-                    tar_out.addfile(tarinfo)
-                    paths.add(tarinfo.name)
-            for tarinfo in map(layout_filter, tar_in):
-                if tarinfo.name in paths:
-                    continue
-                paths.add(tarinfo.name)
-                if tarinfo.isreg():
-                    tar_out.addfile(
-                        tarinfo, fileobj=tar_in.extractfile(tarinfo))
-                else:
-                    tar_out.addfile(tarinfo)
-        tar_out.close()
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error importing archives \"{}\" in image \"{}\"".format(archives, image), p)
-
-    def import_path(self, path, image):
-        self.logger.info(
-            "Importing path \"%s\" into image \"%s\"", path, image)
-
-        def layout_filter(f):
-            f.uid = 0
-            f.gid = 0
-            return f
-        args = ['import', '-', image]
-        p = DockerProcess(self, args, stdin=PIPE, stdout=FNULL)
-        tar = tarfile.open(fileobj=p.stdin, mode='w|')
-        tar.add(path, arcname=".", filter=layout_filter)
-        tar.close()
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error importing archive \"{}\" in image \"{}\"".format(path, image), p)
-
-    def install_freeze(self, container, platform=None):
-        self.logger.info("Installing freeze on container \"%s\"", container)
-
-        def layout_filter(f):
-            f.uid = 0
-            f.gid = 0
-            return f
-        if platform is None:
-            platform = self.machine.platform
-        args = ['cp', '-', "{}:/".format(container)]
-        p = DockerProcess(self, args, stdin=PIPE)
-        tar = tarfile.open(fileobj=p.stdin, mode='w|')
-        tar.add(os.path.join(self.buildout['buildout'][
-                'bin-directory']), arcname="bin", filter=layout_filter, recursive=False)
-        tar.add(os.path.join(os.path.dirname(__file__), 'freeze', 'freeze_{}'.format(
-            platform)), arcname="bin/freeze", filter=layout_filter)
-        tar.close()
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error installing freeze on container \"{}\"".format(container), p)
-
-    def load_archive(self, container, name, fileobj, root="/"):
-        self.logger.info(
-            "Loading archive \"%s\" on container \"%s\"", name, container)
-
-        def layout_filter(f):
-            f.uid = 0
-            f.gid = 0
-            return f
-        args = ['cp', '-', "{}:{}".format(container, root)]
-        p = DockerProcess(self, args, stdin=PIPE)
-        tar_in = tarfile.open(fileobj=fileobj, mode='r|*')
-        tar_out = tarfile.open(fileobj=p.stdin, mode='w|')
-        for tarinfo in tar_in:
-            if tarinfo.name in ['./lib', './usr/lib'] and tarinfo.isdir():
-                lib64_tarinfo = deepcopy(tarinfo)
-                lib64_tarinfo.name = "{}64".format(lib64_tarinfo.name)
-                tar_out.addfile(lib64_tarinfo)
-                tarinfo.type = tarfile.SYMTYPE
-                tarinfo.linkname = os.path.basename(lib64_tarinfo.name)
-            if tarinfo.isreg():
-                tar_out.addfile(tarinfo, fileobj=tar_in.extractfile(tarinfo))
-            else:
-                tar_out.addfile(tarinfo)
-        tar_out.close()
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error loading archive on container \"{}\"".format(container), p)
-
-    def load_layout(self, container, path, root="/", uid=0, gid=0):
-        self.logger.info(
-            "Loading layout \"%s\" on container \"%s\"", path, container)
-
-        def layout_filter(f):
-            f.uid = uid
-            f.gid = gid
-            return f
-        args = ['cp', '-', "{}:{}".format(container, root)]
-        p = DockerProcess(self, args, stdin=PIPE)
-        tar = tarfile.open(fileobj=p.stdin, mode='w|')
-        tar.add(path, arcname=".", filter=layout_filter)
-        tar.close()
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error loading layout on container \"{}\"".format(container), p)
-
-    def networks(self, **filters):
-        params = ['id', 'name', 'driver']
-        args = ['network', 'ls']
-        for k, v in filters.items():
-            args += ['--filter', '{}={}'.format(k, v)]
-        p = DockerProcess(self, args, stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
-        ret = []
-        for line in p.stdout.read().split(os.linesep)[1:-1]:
-            d = {}
-            values = line.split()
-            for n, param in enumerate(params):
-                d[param] = values[n] if values[n] else None
-            ret.append(d)
-        return ret
-
-    def process_path(self, container, path, fn):
-        self.logger.info(
-            "Processing path \"%s\" on container \"%s\"", path, container)
-        args = ['cp', "{}:{}".format(container, path), "-"]
-        p = DockerProcess(self, args, stdout=PIPE)
-        tar = tarfile.open(fileobj=p.stdout, mode='r|')
-        for tarinfo in tar:
-            fn(tar, tarinfo)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error processing path on container \"{}\"".format(container), p)
-
-    def push_image(self, image, username, password, registry='index.docker.io'):
-        self.logger.info(
-            "Pushing image \"%s\" to registry \"%s\"", image, registry)
-        full_image_name = '{}/{}'.format(registry, image)
-        args = ['push', full_image_name]
-        with DockerRegistryLogin(self, registry, username, password) as login:
-            p = DockerProcess(self, args, stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error pushing image \"{}\"".format(full_image_name), p)
-
-    def pull_image(self, image, username=None, password=None, registry='index.docker.io'):
-        self.logger.info(
-            "Pulling image \"%s\" from registry \"%s\"", image, registry)
-        full_image_name = '{}/{}'.format(registry, image)
-        args = ['pull', full_image_name]
-        if username and password:
-            with DockerRegistryLogin(registry, username, password) as login:
-                p = DockerProcess(self, args, stdout=FNULL, config=login.config_path)
-                if p.wait() != 0:
-                    raise DockerError(
-                        "Error pulling image \"{}\"".format(full_image_name), p)
-        else:
-            p = DockerProcess(self, args, stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error pulling image \"{}\"".format(full_image_name), p)
-
-    def remove_container(self, container):
-        try:
-            status = self.containers(all=True, name=container)[0]['status']
-        except IndexError:
-            status = None
-        if status in ['running', 'paused']:
-            self.logger.info("Stopping container \"%s\"", container)
-            p = DockerProcess(self, ['stop', container], stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error stopping container \"{}\"".format(container), p)
-        if status is not None:
-            self.logger.info("Removing container \"%s\"", container)
-            p = DockerProcess(self, ['rm', container], stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error removing container \"{}\"".format(container), p)
-
-    def remove_image(self, name):
-        for container in self.containers(all=True, ancestor=name):
-            self.remove_container(container['names'][0])
-        for image in self.images(name=name):
-            p = DockerProcess(self, ['rmi', image['image']], stdout=FNULL)
-            if p.wait() != 0:
-                raise DockerError(
-                    "Error removing image \"{}\"".format(image['image']), p)
-
-    def remove_network(self, network):
-        for container in self.containers(all=True, network=network):
-            self.remove_container(container)
-        self.logger.info("Removing network \"%s\"", network)
-        p = DockerProcess(self, ['network', 'rm', network], stdout=FNULL)
-        if p.wait() != 0:
-            raise DockerError("Error removing network \"{}\"".format(network), p)
-
-    def remove_volume(self, volume):
-        for container in self.containers(all=True, volume=volume):
-            self.remove_container(container)
-        self.logger.info("Removing volume \"%s\"", volume)
-        p = DockerProcess(self, ['volume', 'rm', volume], stdout=FNULL)
-        if p.wait() != 0:
-            raise DockerError("Error removing volume \"{}\"".format(volume), p)
-
-    def run_cmd(self, container, cmd, privileged=False, quiet=False, return_output=False, user=None):
-        if not quiet:
-            self.logger.info(
-                "Running command \"%s\" on \"%s\"", cmd, container)
-        args = ['exec']
-        if privileged:
-            args.append('--privileged')
-        if user:
-            args += ['-u', user]
-        args += [container] + self.shell.split(' ') + ['-c', cmd]
-        p = DockerProcess(self, args, stdout=PIPE if return_output else None)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error running command \"{}\" on container \"{}\"".format(cmd, container), p)
-        if return_output:
-            return p.stdout.read().strip()
-
-    def run_script(self, container, script, privileged=False, shell=None, user=None):
-        self.logger.info("Running script on \"%s\"", container)
-        args = ['exec', '-i']
-        if privileged:
-            args.append('--privileged')
-        if user:
-            args += ['-u', user]
-        if shell is None:
-            shell = self.shell
-        args += [container] + shell.split(' ')
-        p = DockerProcess(self, args, stdin=PIPE)
-        p.stdin.write(script)
-        p.stdin.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error running script on container \"{}\"".format(container), p)
-
-    def save_layout(self, container, src, dst):
-        self.logger.info(
-            "Saving layout \"%s:%s\" on path \"%s\"", container, src, dst)
-        args = ['cp', "{}:{}".format(container, src), "-"]
-        p = DockerProcess(self, args, stdout=PIPE)
-        tar = tarfile.open(fileobj=p.stdout, mode='r|')
-        for member in tar:
-            member.name = os.path.normpath(member.name.lstrip('/'))
-            tar.extract(member, dst)
-        tar.close()
-        if p.wait() != 0:
-            raise DockerError(
-                "Error saving layout from container \"{}\"".format(container), p)
-
-    def start_container(self, container):
-        self.logger.info("Starting container \"%s\"", container)
-        p = DockerProcess(self, ['start', container], stdout=FNULL)
-        if p.wait() != 0:
-            raise DockerError(
-                "Error creating container \"{}\"".format(container), p)
-
-    def volumes(self, **filters):
-        params = ['driver', 'name']
-        args = ['volume', 'ls']
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
-        p = DockerProcess(self, args, stdout=PIPE)
-        if p.wait() != 0:
-            raise DockerError("Error requesting \"docker {}\"".filter(' '.join(args)), p)
-        ret = []
-        for line in p.stdout.read().split(os.linesep)[1:-1]:
-            d = {}
-            values = line.split()
-            for n, param in enumerate(params):
-                d[param] = values[n] if values[n] else None
-            ret.append(d)
-        return ret
+RecipeFilterset.preload_filters(filters)
+RecipeFilterset.preload_filters(filters_scm)
 
 
-class DockerRecipe(DockerEngine):
+class BaseRecipe(object):
+    loggers = [__name__, 'zc.buildout']
 
     def __init__(self, buildout, name, options):
-        self.buildout, self.options = buildout, options
+        self.logger = logging.getLogger(__name__)
+        self.cleanup_paths = set()
+        self.options = OptionRepository(options)
+        self.buildout = buildout
         self.part_name = name
         self.options.setdefault('name', name)
-        return super(DockerRecipe, self).__init__(
-            logger=self.name,
-            machine_name=self.options.get('machine-name', None),
-            shell=self.options.get(
-                'shell', '/bin/sh'),
-            timeout=int(self.options.get(
-                'timeout', DEFAULT_TIMEOUT)))
+        self.filterset = RecipeFilterset(self)
+        self.log_handler = logging.StreamHandler(sys.stdout)
+        self.initialize()
+
+    @classmethod
+    def _uninstall(cls, name, options):
+        return cls({}, name, options).uninstall()
+
+    def setup_logging(self):
+        self._save_logging = {}
+        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+            self.save_logger(logger)
+            logging._acquireLock()
+            logger.handlers = [self.log_handler]
+            logging._releaseLock()
+            logger.propagate = False
+
+    def restore_logging(self):
+        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+            self.restore_logger(logger)
+
+    def save_logger(self, logger):
+        logging._acquireLock()
+        self._save_logging['{}_handlers'.format(
+            logger.name)] = list(logger.handlers)
+        logging._releaseLock()
+        self._save_logging['{}_propagate'.format(
+            logger.name)] = logger.propagate
+
+    def restore_logger(self, logger):
+        logging._acquireLock()
+        logger.handlers = self._save_logging.pop(
+            '{}_handlers'.format(logger.name))
+        logging._releaseLock()
+        logger.propagate = self._save_logging.pop(
+            '{}_propagate'.format(logger.name))
+
+    def set_logging(self, fmt, level, verbosity=0):
+        self.log_handler.setFormatter(logging.Formatter(fmt))
+        for logger in map(lambda x: logging.getLogger(x), self.loggers):
+            logger.setLevel(level - verbosity)
 
     @property
     def name(self):
@@ -808,42 +155,455 @@ class DockerRecipe(DockerEngine):
 
     @name.setter
     def name(self, value):
-        self.options['name'] = value
+        self.options.set('name', value)
 
+    @property
     @reify
-    def completed(self):
-        return os.path.join(self.buildout['buildout']['parts-directory'], self.name, '.completed')
+    def offline(self):
+        return string_as_bool(self.buildout['buildout'].get('offline', False))
+
+    @property
+    @reify
+    def newest(self):
+        return string_as_bool(self.buildout['buildout'].get('newest', False))
+
+    @property
+    @reify
+    def download_hashing(self):
+        return string_as_bool(self.buildout['buildout'].get('hash-name', True))
+
+    @property
+    @reify
+    def download_cache(self):
+        return self.buildout['buildout'].get('download-cache', None)
+
+    @property
+    @reify
+    def download_manager(self):
+        return Download(self.buildout['buildout'],
+                        hash_name=self.options.get(
+                            'download-hashing',
+                            default=self.buildout.get('download-hashing', True)),
+                        cache=self.download_cache,
+                        logger=self.logger)
+
+    @property
+    @reify
+    def default_executable(self):
+        return self.buildout['buildout'].get('executable', sys.executable)
+
+    @property
+    @reify
+    def default_location(self):
+        return os.path.join(self.buildout['buildout']['parts-directory'], self.name)
+
+    @property
+    @reify
+    def default_working_directory(self):
+        return os.path.join(
+            self.buildout['buildout']['parts-directory'],
+            "{}.workdir{}".format(self.name,
+                                  ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))))
+
+    @property
+    @reify
+    def default_log_format(self):
+        return self.buildout['buildout']['log-format'] or "%(name)s: %(message)s"
+
+    @property
+    @reify
+    def default_log_level(self):
+        return resolve_loglevel(self.buildout['buildout']['log-level'])
+
+    @property
+    @reify
+    def default_verbosity(self):
+        return resolve_verbosity(self.buildout['buildout']['verbosity'])
+
+    def initialize(self):
+        self.set_logging(self.default_log_format,
+                         self.default_log_level)
+
+        if 'install-script' in self.options[None]:
+            self.install_script = self.options.get('install-script')
+        elif 'script' in self.options[None]:
+            self.install_script = self.options.get('script')
+        elif not hasattr(self, 'install_script'):
+            raise UserError(
+                '''You must provide a "script" or "install-script" field.''')
+
+        if 'update-script' in self.options[None]:
+            self.update_script = self.options.get('update-script')
+        elif 'script' in self.options[None]:
+            self.update_script = self.options.get('script')
+        if self.update_script is not None:
+            self.update = self.update_wrapper
+
+        if 'uninstall-script' in self.options[None]:
+            self.uninstall_script = self.options.get('uninstall-script')
+        elif 'script' in self.options[None]:
+            self.uninstall_script = self.options.get('script')
+        if self.uninstall_script is not None:
+            self.uninstall = self.uninstall_wrapper
+
+    def download(self, url, params={}, force=False):
+        return self.filterset('download', [url.strip()], {'params': params, 'force': force})
+
+    def extract_archive(self, src, dst, params={}):
+        return self.filterset('extract.archive', [src.strip(), dst], {'params': params})
+
+    def extract_scm(self, repo_type, src, dst, params={}):
+        return self.filterset('extract.scm', [repo_type, src.strip(), dst], {'params': params})
+
+    @property
+    @reify
+    def locations(self):
+        return uniq(filter(None, [self.default_location] + getattr(self, 'extra_locations', [])))
+
+    @property
+    @reify
+    def working_directories(self):
+        return uniq([self.default_working_directory])
+
+    def install_wrapper(self):
+        self.setup_logging()
+        exc = None
+        try:
+            for location in self.locations:
+                if os.path.exists(location):
+                    self.cleanup_paths.add(location)
+                    raise shutil.Error(
+                        '''Directory "{}" already exists'''.format(location))
+            for working_directory in self.working_directories:
+                self.mkdir(working_directory)
+                self.cleanup_paths.add(working_directory)
+            if callable(self.install_script):
+                self.install_script()
+            else:
+                exec self.install_script
+        except Exception as e:
+            exc = e
+            self.restore_logging()
+            raise
+        finally:
+            if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
+                for f in self.cleanup_paths:
+                    self.logger.info(
+                        '''Left path "{}" as requested'''.format(f))
+            else:
+                for f in self.cleanup_paths:
+                    self.logger.debug('''Cleaning up "{}"'''.format(f))
+                    self.rm(f)
+        specs = self.options.get('specs', default=None)
+        if specs is not None:
+            self.check_specs(specs)
+        self.restore_logging()
+        return self.locations
+    install = install_wrapper
+
+    def update_wrapper(self):
+        self.setup_logging()
+        exc = None
+        try:
+            for working_directory in self.working_directories:
+                self.mkdir(working_directory)
+                self.cleanup_paths.add(working_directory)
+            if callable(self.update_script):
+                self.update_script()
+            else:
+                exec self.update_script
+        except Exception as e:
+            exc = e
+            self.restore_logging()
+            raise
+        finally:
+            if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
+                for f in self.cleanup_paths:
+                    self.logger.info(
+                        '''Left path "{}" as requested'''.format(f))
+            else:
+                for f in self.cleanup_paths:
+                    self.logger.debug('''Cleaning up "{}"'''.format(f))
+                    self.rm(f)
+        specs = self.options.get('specs', default=None)
+        if specs is not None:
+            self.check_specs(specs)
+        self.restore_logging()
+        return self.locations
+
+    def uninstall_wrapper(self):
+        self.setup_logging()
+        exc = None
+        try:
+            if callable(self.uninstall_script):
+                self.uninstall_script()
+            else:
+                exec self.uninstall_script
+        except Exception as e:
+            exc = e
+            self.restore_logging()
+            raise
+        self.restore_logging()
+
+    def _default_install_script(self):
+        pass
+
+    def _default_update_script(self):
+        pass
+
+    def check_specs(self, specs):
+        pass
+
+    def pipe_command(self, command_list, *args, **kwargs):
+        subprocess_list = []
+        previous = None
+        kwargs['stdout'] = subprocess.PIPE
+        run_list = []
+        for command in command_list:
+            if previous is not None:
+                kwargs['stdin'] = previous.stdout
+            p = subprocess.Popen(command, *args, **kwargs)
+            if previous is not None:
+                previous.stdout.close()
+            subprocess_list.append((p, command))
+            run_list.append(' '.join(command))
+            previous = p
+        self.logger.info('''Running: "{}"'''.format(' | '.join(run_list)))
+        subprocess_list.reverse()
+        [q[0].wait() for q in subprocess_list]
+        for q in subprocess_list:
+            if q[0].returncode != 0:
+                raise UserError(
+                    '''Failed while running command "{}"'''.format(q[1]))
+
+    def fail_if_path_exists(self, path):
+        if os.path.lexists(path):
+            raise UserError(
+                '''Path "{}" exists, cannot continue'''.format(path))
+
+    def copy(self, origin, destination):
+        if os.path.isfile(origin):
+            shutil.copy(origin, destination)
+        else:
+            self.copy_tree(origin, destination)
+        return destination
+
+    def copy_tree(self, origin, destination, ignore=[]):
+        if os.path.exists(destination):
+            raise shutil.Error(
+                '''Destination already exists: "{}"'''.format(destination))
+        self.logger.debug(
+            '''Copying "{}" to "{}"'''.format(origin, destination))
+        try:
+            shutil.copytree(origin, destination,
+                            ignore=shutil.ignore_patterns(*ignore))
+        except (shutil.Error, OSError) as error:
+            try:
+                shutil.rmtree(destination, ignore_errors=True)
+            except (shutil.Error, OSError), strerror:
+                self.logger.error(
+                    '''Error occurred when cleaning after error: "{}"'''.format(strerror))
+            raise error
+
+    def mkdir(self, *paths):
+        for path in paths:
+            try:
+                os.makedirs(path)
+            except OSError as e:
+                if e.errno == errno.EEXIST and os.path.isdir(path):
+                    pass
+                else:
+                    raise
+
+    def rm(self, *paths):
+        for path in paths:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            elif os.path.exists(path):
+                os.remove(path)
+
+    def patch(self, patch_spec, prefix=None, command_options=None, command_binary=None, cwd=None):
+        params = {
+            'command-options': shlex.split(command_options) if command_options is not None else [],
+            'command-binary': command_binary.strip() if command_binary is not None else 'patch',
+        }
+        if cwd is not None:
+            params['cwd'] = cwd.strip()
+        for patch in patch_spec.splitlines():
+            patch = patch.strip()
+            if not patch:
+                continue
+            if '#' in patch:
+                patch, params_string = patch.split('#', 1)
+                params.update(parse_qs(params_string))
+            if 'prefix' in params:
+                patch = os.path.join(params['prefix'], patch)
+            self.logger.info('''Applying patch: "{}"'''.format(patch))
+            self.filterset('patch', [patch], {'params': params})
+
+    def call(self, *args, **kwargs):
+        kwargs.update(close_fds=True, stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE)
+        ignore_errnos = kwargs.pop('ignore_errnos', [])
+        stdout_log_level = kwargs.pop(
+            'stdout_log_level', self.default_log_level)
+        stderr_log_level = kwargs.pop('stderr_log_level', logging.ERROR)
+        popen = subprocess.Popen(args, **kwargs)
+        log_level = {popen.stdout: stdout_log_level,
+                     popen.stderr: stderr_log_level}
+
+        def check_io():
+            for io in select([popen.stdout, popen.stderr], [], [], 1000)[0]:
+                line = io.readline().strip()
+                if line:
+                    self.logger.log(log_level[io], '%s', line)
+        while popen.poll() is None:
+            check_io()
+        check_io()
+        returncode = popen.wait()
+        if returncode != 0 and returncode not in ignore_errnos:
+            raise subprocess.CalledProcessError(returncode, ' '.join(args))
+        return returncode
+
+    def calls(self, cmd, **kwargs):
+        """Subprocesser caller which allows to pass arguments as string"""
+        return self.call(shlex.split(cmd), **kwargs)
 
     @classmethod
-    def _uninstall(cls, name, options):
-        return cls({}, name, options).uninstall()
+    def guess_main_directory(cls, path):
+        if len(os.listdir(path)) == 1:
+            child = os.listdir(path)[0]
+            if os.path.isdir(os.path.join(path, child)):
+                return os.path.join(path, child)
+        return path
 
-    def is_image_updated(self, name):
-        if not os.path.exists(self.completed):
-            return True
-        completed_mtime = datetime.fromtimestamp(
-            os.stat(self.completed).st_mtime)
-        for image in self.images(name=name):
-            if image['created_at'] > completed_mtime:
-                return True
-        return False
 
-    def is_layout_updated(self, layout):
-        if not os.path.exists(self.completed):
-            return True
-        completed_mtime = os.stat(self.completed).st_mtime
-        for dirname, subdirs, files in os.walk(layout):
-            if os.stat(dirname).st_mtime > completed_mtime:
-                return True
-            for filename in files:
-                if os.lstat(os.path.join(dirname, filename)).st_mtime > completed_mtime:
-                    return True
-        return False
+class BaseSubRecipe(object):
 
-    def mark_completed(self, files=[]):
-        location = os.path.join(self.buildout['buildout'][
-                                'parts-directory'], self.name)
-        mkdir(location)
-        with open(self.completed, 'a'):
-            os.utime(self.completed, None)
-        return files + [self.completed]
+    def __init__(self, recipe, group):
+        self.recipe = recipe
+        self.group = group
+        self.logger = recipe.logger
+        self.options = recipe.options[group]
+
+    @property
+    @reify
+    def working_directory(self):
+        return self.options.get('working-directory',
+                                self.recipe.default_working_directory)
+
+    @property
+    @reify
+    def executable(self):
+        if self.group is None:
+            default = self.recipe.default_executable
+        else:
+            default = self.recipe.options[None].location
+        return self.options.get('executable', default)
+
+    @property
+    @reify
+    def environment_config(self):
+        env = {}
+        for line in self.options.get('environment', default='').splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if not '=' in line:
+                raise UserError(
+                    '''Line "{}" in environment is incorrect'''.format(line))
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip()
+            if key in env:
+                raise UserError('''Key "{}" is repeated'''.format(key))
+            env[key] = value
+        return env
+
+    @property
+    @reify
+    def environment(self):
+        config = self.environment_config.copy()
+        env = {}
+        for k, v in os.environ.iteritems():
+            change = config.pop(k, None)
+            if change is not None:
+                env[k] = change % os.environ
+                self.logger.info(
+                    '''Environment "{}" set to "{}"'''.format(k, env[k]))
+            else:
+                env[k] = v
+        for k, v in config.iteritems():
+            self.logger.info(
+                '''Environment "{}" added with "{}"'''.format(k, v))
+            env[k] = v
+        return env
+
+    @property
+    @reify
+    def location(self):
+        if self.group is None:
+            default = self.recipe.default_location
+        else:
+            default = self.recipe.options[None].location
+        return self.options.get('location', default)
+
+    @property
+    @reify
+    def log_format(self):
+        return self.options.get('log-format',
+                                self.recipe.default_log_format)
+
+    @property
+    @reify
+    def log_level(self):
+        return self.options.get('log-level',
+                                self.recipe.default_log_level)
+
+    def initialize(self):
+        self.recipe.set_logging(self.log_format,
+                                self.log_level)
+
+
+class BaseGroupRecipe(BaseRecipe):
+    subrecipe_class = NotImplemented
+
+    def __init__(self, buildout, name, options):
+        super(BaseGroupRecipe, self).__init__(buildout, name, options)
+        for group in self.options:
+            self.subrecipes[group] = self.subrecipe_class(self, group)
+            self.subrecipes[group].initialize()
+
+    @property
+    @reify
+    def locations(self):
+        return uniq(filter(None, chain(*map(lambda x:
+                                            [x.location] +
+                                            getattr(x, 'extra_locations', []),
+                                            self.subrecipes.values()))))
+
+    @property
+    @reify
+    def working_directories(self):
+        return uniq(map(lambda x: x.working_directory, self.subrecipes.values()))
+
+    def initialize(self):
+        self.update = self.update_wrapper
+        self.subrecipes = dict()
+
+    def script(self, name, *args, **kwargs):
+        for group in self.subrecipes.keys():
+            attr = getattr(self.subrecipes[group], name)
+            if callable(attr):
+                attr(*args, **kwargs)
+            else:
+                exec attr
+
+    def install_script(self):
+        return self.script('install')
+
+    def update_script(self):
+        return self.script('update')
+
+    def uninstall_script(self):
+        return self.script('uninstall')

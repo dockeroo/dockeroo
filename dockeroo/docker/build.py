@@ -21,21 +21,21 @@ import time
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
-from dockeroo import DockerRecipe, Archive
-from dockeroo.utils import merge
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe, Archive
+from dockeroo.utils import merge, string_as_bool
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
         if ':' not in self.name:
             self.name += ':latest'
         self.source = self.options['source']
         self.build_args = dict([y for y in [x.strip().split('=', 1) for x in self.options.get('build-args', '').split('\n')] if y[0]])
-        self.keep = self.options.get('keep', 'false').strip(
-            ).lower() in ('true', 'yes', 'on', '1')
+        self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
         if not self.images(self.name):
@@ -50,3 +50,7 @@ class Recipe(DockerRecipe):
     def uninstall(self):
         if not self.keep:
             self.remove_image(self.name)
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe

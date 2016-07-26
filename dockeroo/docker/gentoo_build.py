@@ -22,14 +22,15 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerRecipe
-from dockeroo.utils import merge
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.utils import merge, string_as_bool
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
         self.archives = []
         for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in [f for f in [x.strip() for x in self.options.get('archives', self.options.get('archive', '')).split('\n')] if f]]:
@@ -56,8 +57,7 @@ class Recipe(DockerRecipe):
         self.assemble_container = "{}_assemble".format(self.name)
         self.copy = [merge([None, None], y.split()[:2]) for y in [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')] if f]]
         self.base_image = self.options.get('base-image', None)
-        self.keep = self.options.get('keep', 'false').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.keep = string_as_bool(self.options.get('keep', False))
         self.layout = self.options.get('layout', None)
         self.layout_uid = self.options.get('layout-uid', 0)
         self.layout_gid = self.options.get('layout-gid', 0)
@@ -71,8 +71,7 @@ class Recipe(DockerRecipe):
         self.script_shell = self.options.get('script-shell', self.shell)
         self.script = "#!{}\n{}".format(self.script_shell,
                                         '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
-        self.tty = self.options.get('tty', 'false').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.tty = string_as_bool(self.options.get('tty', False))
         self.masks = [_f for _f in [x.strip() for x in self.options.get('mask', '').split('\n')] if _f]
         self.unmasks = [_f for _f in [x.strip() for x in self.options.get('unmask', '').split('\n')] if _f]
         self.uses = [_f for _f in [x.strip() for x in self.options.get('use', '').split('\n')] if _f]
@@ -174,3 +173,7 @@ class Recipe(DockerRecipe):
         self.remove_container(self.assemble_container)
         if not self.keep:
             self.remove_image(self.name)
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe

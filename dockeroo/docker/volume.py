@@ -22,16 +22,17 @@ import shutil
 import tarfile
 import tempfile
 
-from dockeroo import DockerRecipe
+from dockeroo import BaseGroupRecipe
+from dockeroo.docker import BaseDockerSubRecipe
+from dockeroo.utils import string_as_bool
 
 
-class Recipe(DockerRecipe):
+class SubRecipe(BaseDockerSubRecipe):
 
-    def __init__(self, buildout, name, options):
-        super(Recipe, self).__init__(buildout, name, options)
+    def initialize():
+        super(SubRecipe, self).initialize()
 
-        self.keep = self.options.get('keep', 'false').strip(
-        ).lower() in ('true', 'yes', 'on', '1')
+        self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
         self.create_volume(self.name)
@@ -43,3 +44,7 @@ class Recipe(DockerRecipe):
     def uninstall(self):
         if not self.keep:
             self.remove_volume(self.name)
+
+
+class Recipe(BaseGroupRecipe):
+    subrecipe_class = SubRecipe
