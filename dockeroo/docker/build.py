@@ -35,10 +35,10 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
-        if not self.images(self.name):
-            self.build_dockerfile(self.name,
-                                  self.source,
-                                  **self.build_args)
+        if not self.engine.images(self.name):
+            self.engine.build_dockerfile(self.name,
+                                         self.source,
+                                         **self.build_args)
         return self.mark_completed()
 
     def update(self):
@@ -46,7 +46,7 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_image(self.name)
+            self.engine.remove_image(self.name)
 
 
 class DockerBuildRecipe(BaseGroupRecipe):

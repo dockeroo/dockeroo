@@ -58,23 +58,27 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
     def install(self):
         self.location = self.options.get("location", os.path.join(
             self.buildout["buildout"]["parts-directory"], self.name))
-        self.remove_container(self.build_container)
-        self.create_container(self.build_container, self.build_image, command=self.build_command,
-                              privileged=True, tty=self.tty, volumes_from=self.build_volumes_from)
-        self.start_container(self.build_container)
+        self.engine.remove_container(self.build_container)
+        self.engine.create_container(self.build_container, self.build_image,
+                                     command=self.build_command,
+                                     privileged=True, tty=self.tty,
+                                     volumes_from=self.build_volumes_from)
+        self.engine.start_container(self.build_container)
         if self.platform != self.machine.platform:
-            self.config_binfmt(self.build_container, self.platform)
+            self.engine.config_binfmt(self.build_container, self.platform)
         if self.prepare_script:
-            self.run_script(self.build_container, self.prepare_script,
-                            shell=self.build_script_shell, user=self.build_script_user)
-        self.copy_image_to_container(
+            self.engine.run_script(self.build_container, self.prepare_script,
+                                   shell=self.build_script_shell,
+                                   user=self.build_script_user)
+        self.engine.copy_image_to_container(
             self.base_image, self.build_container, "/", dst=self.build_root)
         if self.build_script:
-            self.run_script(self.build_container, self.build_script,
-                            shell=self.build_script_shell, user=self.build_script_user)
-        self.export_files(self.build_container, self.image_file, self.location)
-        self.remove_container(self.build_container)
-        self.clean_stale_images()
+            self.engine.run_script(self.build_container, self.build_script,
+                                   shell=self.build_script_shell,
+                                   user=self.build_script_user)
+        self.engine.export_files(self.build_container, self.image_file, self.location)
+        self.engine.remove_container(self.build_container)
+        self.engine.clean_stale_images()
         return self.mark_completed()
 
     def update(self):

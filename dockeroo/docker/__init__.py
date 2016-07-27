@@ -810,6 +810,7 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         for container in self.containers(include_stopped=True, ancestor=name):
             self.remove_container(container['names'][0])
         for image in self.images(name=name):
+            self.logger.info("Removing image \"%s\"", image['image'])
             proc = DockerProcess(self, ['rmi', image['image']], stdout=FNULL)
             if proc.wait() != 0:
                 raise ExternalProcessError(
@@ -908,21 +909,21 @@ class BaseDockerSubRecipe(BaseSubRecipe):
 
     def initialize(self):
         super(BaseDockerSubRecipe, self).initialize()
+        self.shell = self.options.get('shell', '/bin/sh')
         self.engine = DockerEngine(
             logger=self.logger,
             machine_name=self.options.get('machine-name', None),
             url=self.options.get('engine-url', None),
             tlsverify=self.options.get('engine-tls-verify', None),
             tlscertpath=self.options.get('engine-tls-cert-path', None),
-            shell=self.options.get(
-                'shell', '/bin/sh'),
+            shell=self.shell,
             timeout=int(self.options.get(
                 'timeout', DEFAULT_TIMEOUT)))
 
     @property
     @reify
     def completed(self):
-        return os.path.join(self.default_location, '.completed')
+        return os.path.join(self.location, '.completed')
 
     def is_image_updated(self, name):
         if not os.path.exists(self.completed):
@@ -947,7 +948,7 @@ class BaseDockerSubRecipe(BaseSubRecipe):
         return False
 
     def mark_completed(self, files=None):
-        self.mkdir(self.default_location)
+        self.recipe.mkdir(self.location)
         with open(self.completed, 'a'):
             os.utime(self.completed, None)
         return (files or []) + [self.completed]

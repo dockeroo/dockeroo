@@ -30,10 +30,10 @@ class DockerPushSubRecipe(BaseDockerSubRecipe):
         self.registry = self.options.get('registry', 'index.docker.io')
 
     def install(self):
-        self.push_image(self.name,
-                        self.username,
-                        self.password,
-                        registry=self.registry)
+        self.engine.push_image(self.name,
+                               self.username,
+                               self.password,
+                               registry=self.registry)
         return self.mark_completed()
 
     def update(self):

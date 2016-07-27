@@ -113,7 +113,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
 
     def add_package_modifier(self, name, modifiers):
         for modifier in modifiers:
-            self.run_cmd(
+            self.engine.run_cmd(
                 self.build_container,
                 "chroot-{arch}-docker -c \"echo {modifier} >>/etc/portage/package.{name}\"".format(
                     arch=self.arch, modifier=quote(modifier), name=name))
@@ -122,10 +122,10 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         if self.archives:
             for archive in self.archives:
                 archive.download(self.buildout)
-            self.import_archives(name, *self.archives)
+            self.engine.import_archives(name, *self.archives)
         else:
             root = tempfile.mkdtemp()
-            self.import_path(root, name)
+            self.engine.import_path(root, name)
             shutil.rmtree(root)
         return name
 
@@ -134,19 +134,19 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             base_image = self.base_image
         else:
             base_image = self.create_base_image(self.name)
-        self.remove_container(self.assemble_container)
-        self.create_container(self.assemble_container, base_image, command="/bin/freeze",
-                              privileged=True, tty=self.tty, volumes_from=self.volumes_from)
-        self.install_freeze(self.assemble_container)
-        self.start_container(self.assemble_container)
+        self.engine.remove_container(self.assemble_container)
+        self.engine.create_container(self.assemble_container, base_image, command="/bin/freeze",
+                                     privileged=True, tty=self.tty, volumes_from=self.volumes_from)
+        self.engine.install_freeze(self.assemble_container)
+        self.engine.start_container(self.assemble_container)
 
         if self.build_image:
-            self.remove_container(self.build_container)
-            self.create_container(self.build_container, self.build_image,
-                                  command=self.build_command,
-                                  privileged=True, tty=self.tty,
-                                  volumes_from=self.build_volumes_from)
-            self.start_container(self.build_container)
+            self.engine.remove_container(self.build_container)
+            self.engine.create_container(self.build_container, self.build_image,
+                                         command=self.build_command,
+                                         privileged=True, tty=self.tty,
+                                         volumes_from=self.build_volumes_from)
+            self.engine.start_container(self.build_container)
             if self.platform != self.machine.platform:
                 self.config_binfmt(self.build_container, self.platform)
             if self.build_layout:
@@ -155,50 +155,50 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             self.add_package_modifier('mask', self.masks)
             self.add_package_modifier('unmask', self.unmasks)
             self.add_package_modifier('use', self.uses)
-            self.run_cmd(
+            self.engine.run_cmd(
                 self.build_container,
                 "chroot-{arch}-docker -c \"eclean packages && emaint binhost --fix\""
                 .format(arch=self.arch))
-            self.run_cmd(
+            self.engine.run_cmd(
                 self.build_container,
                 "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
                 .format(arch=self.arch, packages=' '.join(self.build_dependencies + self.packages),
                         env=' '.join(['='.join(x) for x in self.build_env.items()])))
             package_atoms = ["={}".format(
-                self.run_cmd(
+                self.engine.run_cmd(
                     self.build_container,
                     "chroot-{arch}-docker -c \"equery list --format=\"\\$cpv\" {package}\" | "
                     "head -1"
                     .format(arch=self.arch, package=package),
                     quiet=True, return_output=True)) for package in self.packages]
-            self.run_cmd(
+            self.engine.run_cmd(
                 self.build_container,
                 "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
                     arch=self.arch, packages=' '.join(package_atoms)))
             if self.build_script:
-                self.run_script(self.build_container, self.build_script,
-                                shell=self.build_script_shell, user=self.build_script_user)
-            self.copy_path(self.build_container, self.assemble_container,
-                           "/usr/{processor}-{variant}-linux-{abi}/dockeroo-root/".format(
-                               processor=self.processor, variant=self.variant, abi=self.abi),
-                           dst="/")
+                self.engine.run_script(self.build_container, self.build_script,
+                                       shell=self.build_script_shell, user=self.build_script_user)
+            self.engine.copy_path(self.build_container, self.assemble_container,
+                                  "/usr/{processor}-{variant}-linux-{abi}/dockeroo-root/".format(
+                                      processor=self.processor, variant=self.variant, abi=self.abi),
+                                  dst="/")
             for src, dst in self.copy:
-                self.copy_path(self.build_container,
-                               self.assemble_container, src, dst=dst)
-            self.remove_container(self.build_container)
+                self.engine.copy_path(self.build_container,
+                                      self.assemble_container, src, dst=dst)
+            self.engine.remove_container(self.build_container)
         if self.layout:
-            self.load_layout(self.assemble_container, self.layout,
-                             uid=self.layout_uid, gid=self.layout_gid)
+            self.engine.load_layout(self.assemble_container, self.layout,
+                                    uid=self.layout_uid, gid=self.layout_gid)
         if self.script:
             if self.platform != self.machine.platform:
-                self.config_binfmt(self.assemble_container, self.platform)
-            self.run_script(self.assemble_container, self.script,
-                            shell=self.script_shell, user=self.script_user)
-        self.commit_container(self.assemble_container, self.name,
-                              command=self.command, user=self.user, labels=self.labels,
-                              expose=self.expose, volumes=self.volumes)
-        self.remove_container(self.assemble_container)
-        self.clean_stale_images()
+                self.engine.config_binfmt(self.assemble_container, self.platform)
+            self.engine.run_script(self.assemble_container, self.script,
+                                   shell=self.script_shell, user=self.script_user)
+        self.engine.commit_container(self.assemble_container, self.name,
+                                     command=self.command, user=self.user, labels=self.labels,
+                                     expose=self.expose, volumes=self.volumes)
+        self.engine.remove_container(self.assemble_container)
+        self.engine.clean_stale_images()
         return self.mark_completed()
 
     def update(self):
@@ -207,15 +207,15 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             (self.build_layout and self.is_layout_updated(self.build_layout)) or \
             (self.build_image and self.is_image_updated(self.build_image)) or \
             (self.base_image and self.is_image_updated(self.base_image)) or \
-                not self.images(name=self.name):
+                not self.engine.images(name=self.name):
             return self.install()
         return self.mark_completed()
 
     def uninstall(self):
-        self.remove_container(self.build_container)
-        self.remove_container(self.assemble_container)
+        self.engine.remove_container(self.build_container)
+        self.engine.remove_container(self.assemble_container)
         if not self.keep:
-            self.remove_image(self.name)
+            self.engine.remove_image(self.name)
 
 
 class DockerGentooBuildRecipe(BaseGroupRecipe):

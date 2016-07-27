@@ -23,16 +23,17 @@ from dockeroo.docker import BaseDockerSubRecipe
 from dockeroo.utils import string_as_bool
 
 
-class SubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
+class DockerRunSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
-        super(SubRecipe, self).initialize()
+        super(DockerRunSubRecipe, self).initialize()
 
         self.image = self.options['image']
         self.command = self.options.get('command', None)
         self.user = self.options.get('user', None)
         self.layout = self.options.get('layout', None)
         self.tty = string_as_bool(self.options.get('tty', False))
+        self.keep = string_as_bool(self.options.get('keep', False))
         self.env = dict([y for y in [x.strip().split(
             '=') for x in self.options.get('env', '').split('\n')] if y[0]])
         self.ports = dict([y for y in [x.strip().split(
@@ -62,39 +63,40 @@ class SubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attrib
         self.start = string_as_bool(self.options.get('start', True))
 
     def install(self):
-        self.remove_container(self.name)
-        self.create_container(self.name, self.image, command=self.command, run=False,
-                              tty=self.tty, volumes=self.volumes,
-                              volumes_from=self.volumes_from,
-                              user=self.user, env=self.env, ports=self.ports,
-                              networks=self.networks, links=self.links,
-                              network_aliases=self.network_aliases)
+        self.engine.remove_container(self.name)
+        self.engine.create_container(self.name, self.image, command=self.command, run=False,
+                                     tty=self.tty, volumes=self.volumes,
+                                     volumes_from=self.volumes_from,
+                                     user=self.user, env=self.env, ports=self.ports,
+                                     networks=self.networks, links=self.links,
+                                     network_aliases=self.network_aliases)
         if self.layout:
-            self.load_layout(self.name, self.layout)
+            self.engine.load_layout(self.name, self.layout)
         if not self.start:
             self.options.pop('ip-address', None)
             return self.mark_completed()
-        self.start_container(self.name)
-        self.options['ip-address'] = self.get_container_ip_address(self.name)
+        self.engine.start_container(self.name)
+        self.options['ip-address'] = self.engine.get_container_ip_address(self.name)
         if self.script:
-            self.run_script(self.name, self.script,
-                            shell=self.script_shell, user=self.script_user)
+            self.engine.run_script(self.name, self.script,
+                                   shell=self.script_shell, user=self.script_user)
         return self.mark_completed()
 
     def update(self):
         if self.is_image_updated(self.image) or \
-            not self.containers(name=self.name):
+            not self.engine.containers(name=self.name):
             return self.install()
         if self.layout and self.is_layout_updated(self.layout):
-            self.load_layout(self.name, self.layout)
+            self.engine.load_layout(self.name, self.layout)
             if self.script:
-                self.run_script(self.name, self.script,
-                                shell=self.script_shell, user=self.script_user)
+                self.engine.run_script(self.name, self.script,
+                                       shell=self.script_shell, user=self.script_user)
         return self.mark_completed()
 
     def uninstall(self):
-        self.remove_container(self.name)
+        if not self.keep:
+            self.engine.remove_container(self.name)
 
 
-class Recipe(BaseGroupRecipe):
-    subrecipe_class = SubRecipe
+class DockerRunRecipe(BaseGroupRecipe):
+    subrecipe_class = DockerRunSubRecipe

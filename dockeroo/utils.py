@@ -18,7 +18,6 @@
 
 from collections import defaultdict
 from datetime import datetime, timedelta, tzinfo
-import logging
 import random
 import re
 import string
@@ -80,7 +79,7 @@ class OptionGroup(object):
         self.group = group
 
     def _key(self, key):
-        return "{}_{}".format(self.group, key) if self.group is not None else key
+        return "{}.{}".format(self.group, key) if self.group is not None else key
 
     def __getitem__(self, key):
         ret = self.get(key, NonExistentOption)
@@ -97,6 +96,10 @@ class OptionGroup(object):
     def __iter__(self):
         for key in self.repository.group_keys[self.group]:
             yield key
+
+    def items(self):
+        for key in self.repository.group_keys[self.group]:
+            yield (key, self.repository.options.get(self._key(key)))
 
     def get(self, key, default=None):
         return self.repository.options.get(self._key(key), default)
@@ -130,7 +133,7 @@ class OptionRepository(object):
         self.groups = dict()
         self.group_keys = defaultdict(set)
         for option in self.options.keys():
-            split = option.split('_', 1)
+            split = option.split('.', 1)
             if len(split) > 1:
                 self.group_keys[split[0]].add(split[1])
             else:
@@ -205,10 +208,11 @@ def parse_datetime(value):
         return datetime(**kwargs)
 
 def reify(func):
-    def _reify(func, *args, **kwargs):
-        if not hasattr(func, '_cache'):
-            setattr(func, '_cache', func(*args, **kwargs))
-        return getattr(func, '_cache')
+    def _reify(func, self, *args, **kwargs):
+        cache = '_cache_{}'.format(func.__name__)
+        if not hasattr(self, cache):
+            setattr(self, cache, func(self, *args, **kwargs))
+        return getattr(self, cache)
     return decorate(func, _reify)
 
 def listify(func):

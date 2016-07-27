@@ -32,21 +32,21 @@ class DockerPullSubRecipe(BaseDockerSubRecipe):
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
-        self.pull_image(self.name,
-                        username=self.username,
-                        password=self.password,
-                        registry=self.registry)
+        self.engine.pull_image(self.name,
+                               username=self.username,
+                               password=self.password,
+                               registry=self.registry)
         return self.mark_completed()
 
     def update(self):
         if self.is_image_updated(self.name) or \
-            not self.images(name=self.name):
+            not self.engine.images(name=self.name):
             return self.install()
         return self.mark_completed()
 
     def uninstall(self):
         if not self.keep:
-            self.remove_image(self.name)
+            self.engine.remove_image(self.name)
 
 class DockerPullRecipe(BaseGroupRecipe):
     subrecipe_class = DockerPullSubRecipe

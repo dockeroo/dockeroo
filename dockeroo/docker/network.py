@@ -36,17 +36,19 @@ class DockerNetworkSubRecipe(BaseDockerSubRecipe):
         self.ip_range = self.options.get('ip-range', None)
 
     def install(self):
-        self.create_network(self.name,
-                            driver=self.driver,
-                            gateway=self.gateway,
-                            subnet=self.subnet,
-                            ip_range=self.ip_range,
-                            internal=self.internal,
-                            ipv6=self.ipv6)
-        return ()
+        self.engine.create_network(self.name,
+                                   driver=self.driver,
+                                   gateway=self.gateway,
+                                   subnet=self.subnet,
+                                   ip_range=self.ip_range,
+                                   internal=self.internal,
+                                   ipv6=self.ipv6)
+        return self.mark_completed()
 
     def update(self):
-        pass
+        if not self.engine.networks(name=self.name):
+            return self.install()
+        return self.mark_completed()
 
     def uninstall(self):
         if not self.keep:

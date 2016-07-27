@@ -67,44 +67,45 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
                     "Image does not exist and no source specified.")
             for archive in self.archives:
                 archive.download(self.buildout)
-            self.import_archives(self.name, *self.archives)
+            self.engine.import_archives(self.name, *self.archives)
 
         if not self.containers(include_stopped=True, name=self.container):
-            self.create_container(self.container, self.name, command=self.command,
-                                  privileged=True, tty=self.tty, volumes=self.volumes,
-                                  volumes_from=self.volumes_from)
+            self.engine.create_container(self.container,
+                                         self.name, command=self.command,
+                                         privileged=True, tty=self.tty, volumes=self.volumes,
+                                         volumes_from=self.volumes_from)
         # else:
         #    raise RuntimeError("Container \"{}\" already exists".format(self.container))
 
-        self.install_freeze(self.container)
+        self.engine.install_freeze(self.container)
 
         if self.layout:
-            self.load_layout(self.container, self.layout)
+            self.engine.load_layout(self.container, self.layout)
 
-        self.start_container(self.container)
+        self.engine.start_container(self.container)
 
         if self.script:
             if self.crossdev_platform != self.machine.platform:
-                self.config_binfmt(self.container, self.crossdev_platform)
-            self.run_script(self.container, self.script)
+                self.engine.config_binfmt(self.container, self.crossdev_platform)
+            self.engine.run_script(self.container, self.script)
 
         if self.commit:
-            self.commit_container(self.container, self.name)
-            self.remove_container(self.container)
-            self.clean_stale_images()
+            self.engine.commit_container(self.container, self.name)
+            self.engine.remove_container(self.container)
+            self.engine.clean_stale_images()
 
         return self.mark_completed()
 
     def update(self):
         if (self.layout and self.is_layout_updated(self.layout)) or \
-            not self.images(name=self.name):
+            not self.engine.images(name=self.name):
             return self.install()
         return self.mark_completed()
 
     def uninstall(self):
-        self.remove_container(self.container)
+        self.engine.remove_container(self.container)
         if not self.keep:
-            self.remove_image(self.name)
+            self.engine.remove_image(self.name)
 
 
 class DockerGentooBootstrapRecipe(BaseGroupRecipe):

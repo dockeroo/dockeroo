@@ -34,8 +34,8 @@ class DockerCopySubRecipe(BaseDockerSubRecipe):
 
     def install(self):
         for src, dst in self.paths:
-            self.copy_path(self.container_from,
-                           self.container_to, src, dst=dst)
+            self.engine.copy_path(self.container_from,
+                                  self.container_to, src, dst=dst)
 
     def update(self):
         pass

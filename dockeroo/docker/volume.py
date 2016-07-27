@@ -29,7 +29,7 @@ class DockerVolumeSubRecipe(BaseDockerSubRecipe):
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
-        self.create_volume(self.name)
+        self.engine.create_volume(self.name)
         return self.mark_completed()
 
     def update(self):
@@ -37,7 +37,7 @@ class DockerVolumeSubRecipe(BaseDockerSubRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_volume(self.name)
+            self.engine.remove_volume(self.name)
 
 
 class DockerVolumeRecipe(BaseGroupRecipe):

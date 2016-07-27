@@ -115,9 +115,7 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
 
     @classmethod
     def _uninstall(cls, name, options):
-        self = cls({
-                       'buildout': {},
-                   }, name, options)
+        self = cls({'buildout': {}}, name, options)
         if hasattr(self, 'uninstall') and callable(self.uninstall):
             return self.uninstall()
 
@@ -251,39 +249,34 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
         except ValueError:
             raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
+    def initialize_script(self, script_type, mandatory=False):
+        if 'update-script' in self.options[None]:
+            setattr(self, '_{}_script'.format(script_type),
+                    self.options.get('{}-script'.format(script_type)))
+        elif 'script' in self.options[None]:
+            setattr(self, '_{}_script'.format(script_type),
+                    self.options.get('script'))
+        elif hasattr(self, '{}_script'.format(script_type)):
+            setattr(self, '_{}_script'.format(script_type),
+                    getattr(self, '{}_script'.format(script_type)))
+        elif mandatory:
+            raise UserError(
+                '''You must provide a "script" or "{}-script" field.'''
+                .format(script_type))
+        else:
+            self._update_script = None
+
     def initialize(self):
         self.set_logging(self.default_log_format,
                          self.default_log_level)
 
-        if 'install-script' in self.options[None]:
-            self._install_script = self.options.get('install-script')
-        elif 'script' in self.options[None]:
-            self._install_script = self.options.get('script')
-        elif hasattr(self, 'install_script'):
-            self._install_script = self.install_script
-        else:
-            raise UserError(
-                '''You must provide a "script" or "install-script" field.''')
+        self.initialize_script('install', mandatory=True)
 
-        if 'update-script' in self.options[None]:
-            self._update_script = self.options.get('update-script')
-        elif 'script' in self.options[None]:
-            self._update_script = self.options.get('script')
-        elif hasattr(self, 'update_script'):
-            self._update_script = self.update_script
-        else:
-            self._update_script = None
+        self.initialize_script('update')
         if self._update_script is not None:
             self.update = self.update_wrapper
 
-        if 'uninstall-script' in self.options[None]:
-            self._uninstall_script = self.options.get('uninstall-script')
-        elif 'script' in self.options[None]:
-            self._uninstall_script = self.options.get('script')
-        elif hasattr(self, 'uninstall_script'):
-            self._uninstall_script = self.uninstall_script
-        else:
-            self._uninstall_script = None
+        self.initialize_script('uninstall')
         if self._uninstall_script is not None:
             self.uninstall = self.uninstall_wrapper
 
