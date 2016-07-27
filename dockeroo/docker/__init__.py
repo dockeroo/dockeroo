@@ -930,7 +930,7 @@ class BaseDockerSubRecipe(BaseSubRecipe):
             return True
         completed_mtime = datetime.fromtimestamp(
             os.stat(self.completed).st_mtime)
-        for image in self.images(name=name):
+        for image in self.engine.images(name=name):
             if image['created_at'] > completed_mtime:
                 return True
         return False

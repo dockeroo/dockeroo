@@ -35,7 +35,7 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
-        if not self.engine.images(self.name):
+        if not next(self.engine.images(self.name), None):
             self.engine.build_dockerfile(self.name,
                                          self.source,
                                          **self.build_args)
