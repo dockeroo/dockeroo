@@ -91,6 +91,6 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             self.git_cmd('clone', command_args, verbose=verbose)
         else:
             command_args = ['origin']
-            self._git('fetch', command_args, verbose=verbose, env={
+            self.git_cmd('fetch', command_args, verbose=verbose, env={
                 'GIT_DIR': path,
             })

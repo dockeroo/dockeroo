@@ -69,7 +69,7 @@ class SetupScriptRecipe(SetupDownloadRecipe):
         ... parts = part
         ...
         ... [part]
-        ... recipe = dockeroo:build.script
+        ... recipe = dockeroo:setup.script
         ... script =
         ... ''') as b:
         ...     print_(b.run(), end='')

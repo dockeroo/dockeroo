@@ -132,7 +132,7 @@ class SetupDownloadRecipe(BaseSourceRecipe):
         ...     https://pypi.python.org/simple/tzlocal/
         ...
         ... [part]
-        ... recipe = dockeroo:build.download
+        ... recipe = dockeroo:setup.download
         ... url = %(server)sdata/package-0.0.0.tar.gz
         ... patches =
         ...     patches/configure.patch
@@ -160,7 +160,7 @@ class SetupDownloadRecipe(BaseSourceRecipe):
         ...     https://pypi.python.org/simple/tzlocal/
         ...
         ... [part]
-        ... recipe = dockeroo:build.download
+        ... recipe = dockeroo:setup.download
         ... url = git+https://github.com/buildout/buildout.git
         ... verbose = true
         ... repository-subpath = doc

@@ -52,7 +52,7 @@ def setUp(test):
 
         def reset(self):
             test.globs['write'](test.globs['sample_buildout'], 'buildout.cfg',
-                '''[buildout]\nparts =''')
+                os.linesep.join(('[buildout]', 'offline=true', 'parts =')))
             test.globs['system'](test.globs['buildout'])
 
         def __enter__(self):

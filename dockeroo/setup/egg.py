@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import string
+import sys
 from copy import copy
 from tempfile import mkdtemp, mkstemp
 
@@ -124,6 +125,14 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
             self.working_set = self.recipe.working_set
         self.index = get_index(self.index_url, self.find_links_urls)
 
+    def default_eggs_directory(self, develop=False):
+        if develop and 'develop-eggs-directory' in self.recipe.buildout['buildout']:
+            return self.recipe.buildout['buildout']['develop-eggs-directory']
+        elif 'eggs-directory' in self.recipe.buildout['buildout']:
+            return self.recipe.buildout['buildout']['eggs-directory']
+        else:
+            return os.path.join(os.path.dirname(sys.argv[0]), '..', 'eggs')
+
     def populate_source(self, source, dependency=False):
         super(SetupEggSubRecipe, self).populate_source(
             source, load_options=not dependency)
@@ -135,16 +144,17 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
             if 'find-egg' in source else source['requirement']
         source['find-egg'] = str(source['find-requirement'])
         source.setdefault('build', True)
+        egg_directories = []
+        if 'develop-eggs-directory' in self.recipe.buildout['buildout']:
+            egg_directories.append(self.recipe.buildout['buildout']['develop-eggs-directory'])
+        if 'eggs-directory' in self.recipe.buildout['buildout']:
+            egg_directories.append(self.recipe.buildout['buildout']['eggs-directory'])
         source.setdefault('egg-path',
                           [source['location']] if 'location' in source else [] +
-                          source.get('extra-paths', []) + [
-                              self.recipe.buildout['buildout'][
-                                  'develop-eggs-directory'],
-                              self.recipe.buildout['buildout'][
-                                  'eggs-directory'],
-                          ] + buildout_and_setuptools_path)
-        source.setdefault('location', self.recipe.buildout['buildout'][
-            'develop-eggs-directory' if source.get('develop', False) else 'eggs-directory'])
+                          source.get('extra-paths', []) + egg_directories +
+                          buildout_and_setuptools_path)
+        source.setdefault('location',
+                          self.default_eggs_directory(develop=source.get('develop', False)))
         source['egg-environment'] = Environment(source['egg-path'])
         source['build-options'] = {}
         if not dependency:
@@ -313,16 +323,14 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
                           if candidate.precedence == requirement_type]
         if prefer_final:
             final_candidates = [candidate for candidate in candidates
-                                if not any([(part[:1] == '*')
-                                            and (part not in ('*final-', '*final'))
-                                            for part in candidate.parsed_version])]
+                                if not candidate.parsed_version.is_prerelease]
             if final_candidates:
                 candidates = final_candidates
         best = []
-        bestv = ()
+        bestv = None
         for candidate in candidates:
             candidatev = candidate.parsed_version
-            if candidatev > bestv:
+            if not bestv or candidatev > bestv:
                 best = [candidate]
                 bestv = candidatev
             elif candidatev == bestv:
@@ -381,7 +389,7 @@ class SetupEggRecipe(SetupDownloadRecipe):
         ... parts = part
         ...
         ... [part]
-        ... recipe = dockeroo:build.egg
+        ... recipe = dockeroo:setup.egg
         ... egg = dummy
         ... ''' % dict(server=server_url)) as b:
         ...     print_(b.run(), end='')

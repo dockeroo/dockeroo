@@ -42,7 +42,6 @@ from dockeroo.filters import scm as filters_scm
 from dockeroo.filters import RecipeFilter
 from dockeroo.utils import ExternalProcessError
 from dockeroo.utils import OptionRepository, reify
-from dockeroo.utils import resolve_loglevel, resolve_verbosity
 from dockeroo.utils import string_as_bool, uniq
 
 
@@ -116,7 +115,11 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
 
     @classmethod
     def _uninstall(cls, name, options):
-        return cls({}, name, options).uninstall()
+        self = cls({
+                       'buildout': {},
+                   }, name, options)
+        if hasattr(self, 'uninstall') and callable(self.uninstall):
+            return self.uninstall()
 
     def setup_logging(self):
         self._save_logging = {}
@@ -197,14 +200,26 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
 
     @property
     @reify
+    def buildout_directory(self):
+        return self.buildout['buildout'].get(
+            'directory', os.path.join(os.path.dirname(sys.argv[0]), '..', 'parts'))
+
+    @property
+    @reify
+    def parts_directory(self):
+        return self.buildout['buildout'].get(
+            'parts-directory', os.path.join(self.buildout_directory, 'parts'))
+
+    @property
+    @reify
     def default_location(self):
-        return os.path.join(self.buildout['buildout']['parts-directory'], self.name)
+        return os.path.join(self.parts_directory, self.name)
 
     @property
     @reify
     def default_working_directory(self):
         return os.path.join(
-            self.buildout['buildout']['parts-directory'],
+            self.parts_directory,
             "{}.workdir{}".format(
                 self.name,
                 ''.join(random.choice(string.ascii_letters + string.digits) \
@@ -213,17 +228,28 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
     @property
     @reify
     def default_log_format(self):
-        return self.buildout['buildout']['log-format'] or "%(name)s: %(message)s"
+        return self.buildout['buildout'].get('log-format', None) or "%(name)s: %(message)s"
 
     @property
     @reify
     def default_log_level(self):
-        return resolve_loglevel(self.buildout['buildout']['log-level'])
+        level = self.buildout['buildout'].get('log-level', 'INFO')
+        if level in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
+            return getattr(logging, level)
+        else:
+            try:
+                return int(level)
+            except ValueError:
+                raise UserError('''Invalid log level "{}"'''.format(level))
 
     @property
     @reify
     def default_verbosity(self):
-        return resolve_verbosity(self.buildout['buildout']['verbosity'])
+        verbosity = self.buildout['buildout'].get('verbosity', 0)
+        try:
+            return int(verbosity)
+        except ValueError:
+            raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
     def initialize(self):
         self.set_logging(self.default_log_format,
@@ -245,16 +271,20 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             self._update_script = self.options.get('script')
         elif hasattr(self, 'update_script'):
             self._update_script = self.update_script
-        if self.update_script is not None:
+        else:
+            self._update_script = None
+        if self._update_script is not None:
             self.update = self.update_wrapper
 
         if 'uninstall-script' in self.options[None]:
             self._uninstall_script = self.options.get('uninstall-script')
         elif 'script' in self.options[None]:
             self._uninstall_script = self.options.get('script')
-        elif hasattr(self, 'uininstall_script'):
-            self._uininstall_script = self.uininstall_script
-        if self.uninstall_script is not None:
+        elif hasattr(self, 'uninstall_script'):
+            self._uninstall_script = self.uninstall_script
+        else:
+            self._uninstall_script = None
+        if self._uninstall_script is not None:
             self.uninstall = self.uninstall_wrapper
 
     def download(self, url, params=None, force=False):
@@ -353,12 +383,6 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             self.restore_logging()
             raise
         self.restore_logging()
-
-    def _default_install_script(self):
-        pass
-
-    def _default_update_script(self):
-        pass
 
     def check_specs(self, specs):
         pass
@@ -605,15 +629,16 @@ class BaseGroupRecipe(BaseRecipe):
         return uniq([x.working_directory for x in self.subrecipes.values()])
 
     def initialize(self):
+        super(BaseGroupRecipe, self).initialize()
         self.update = self.update_wrapper
         self.subrecipes = dict()
 
     def script(self, name, *args, **kwargs):
         for group in self.subrecipes:
-            attr = getattr(self.subrecipes[group], name)
+            attr = getattr(self.subrecipes[group], name, None)
             if callable(attr):
                 attr(*args, **kwargs)
-            else:
+            elif attr is not None:
                 exec(attr) # pylint: disable=exec-used
 
     def install_script(self):

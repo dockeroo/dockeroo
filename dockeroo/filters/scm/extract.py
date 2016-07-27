@@ -61,7 +61,7 @@ class ScmExtractFilter(RecipeFilter, GitRecipeFilterMixin):
                 'GIT_DIR': src,
                 'GIT_WORK_TREE': dst,
             }, verbose=True)
-        self._git('checkout-index', ['-a', '-f', '--prefix={}'.format(quote(dst + '/'))], env={
+        self.git_cmd('checkout-index', ['-a', '-f', '--prefix={}'.format(quote(dst + '/'))], env={
             'GIT_INDEX_FILE': index_file,
             'GIT_DIR': src,
             'GIT_WORK_TREE': dst,

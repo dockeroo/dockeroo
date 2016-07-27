@@ -134,7 +134,7 @@ class SetupCmmiRecipe(SetupDownloadRecipe):
         ...     https://pypi.python.org/simple/tzlocal/
         ...
         ... [part]
-        ... recipe = dockeroo:build.cmmi
+        ... recipe = dockeroo:setup.cmmi
         ... url = %(server)sdata/package-0.0.0.tar.gz
         ... ''' % dict(server=server_url)) as b:
         ...     print_(b.run(), end='')

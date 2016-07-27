@@ -178,23 +178,6 @@ def random_name(size=8):
 def quote(strobj):
     return '"{}"'.format(strobj.replace('"', '\\"'))
 
-def resolve_loglevel(level):
-    if not level:
-        return None
-    if level in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
-        return getattr(logging, level)
-    else:
-        try:
-            return int(level)
-        except ValueError:
-            raise UserError('''Invalid log level "{}"'''.format(level))
-
-def resolve_verbosity(verbosity):
-    try:
-        return int(verbosity)
-    except ValueError:
-        raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
-
 DATETIME_RE = re.compile(
     r'(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})'
     r'[T ](?P<hour>\d{1,2}):(?P<minute>\d{1,2})'
