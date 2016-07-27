@@ -38,12 +38,13 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
         self.layout = self.options.get('layout', None)
         self.crossdev_platform = self.options.get(
             'crossdev-platform', self.machine.platform)
-        self.script = "#!{}\n{}".format(
-            self.shell, '\n'.join([_f for _f in
+        sefl.build_shell = self.options.get('build-shell', self.shell)
+        self.build_script = "#!{}\n{}".format(
+            self.build_shell, '\n'.join([_f for _f in
                                    [x.strip() for x in
-                                    self.options.get('script').replace('$$', '$').split('\n')]
+                                    self.options.get('build-script').replace('$$', '$').split('\n')]
                                    if _f])) \
-                                   if self.options.get('script', None) is not None else None
+                                   if self.options.get('build-script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
         self.archives = []
         for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in
@@ -84,10 +85,10 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
 
         self.engine.start_container(self.container)
 
-        if self.script:
+        if self.build_script:
             if self.crossdev_platform != self.machine.platform:
                 self.engine.config_binfmt(self.container, self.crossdev_platform)
-            self.engine.run_script(self.container, self.script)
+            self.engine.run_script(self.container, self.build_script)
 
         if self.commit:
             self.engine.commit_container(self.container, self.name)

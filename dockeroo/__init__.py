@@ -249,35 +249,35 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
         except ValueError:
             raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
-    def initialize_script(self, script_type, mandatory=False):
-        if 'update-script' in self.options[None]:
-            setattr(self, '_{}_script'.format(script_type),
-                    self.options.get('{}-script'.format(script_type)))
-        elif 'script' in self.options[None]:
-            setattr(self, '_{}_script'.format(script_type),
-                    self.options.get('script'))
-        elif hasattr(self, '{}_script'.format(script_type)):
-            setattr(self, '_{}_script'.format(script_type),
-                    getattr(self, '{}_script'.format(script_type)))
+    def initialize_call(self, call_type, mandatory=False):
+        if 'update-call' in self.options[None]:
+            setattr(self, '_{}_call'.format(call_type),
+                    self.options.get('{}-call'.format(call_type)))
+        elif 'call' in self.options[None]:
+            setattr(self, '_{}_call'.format(call_type),
+                    self.options.get('call'))
+        elif hasattr(self, '{}_call'.format(call_type)):
+            setattr(self, '_{}_call'.format(call_type),
+                    getattr(self, '{}_call'.format(call_type)))
         elif mandatory:
             raise UserError(
-                '''You must provide a "script" or "{}-script" field.'''
-                .format(script_type))
+                '''You must provide a "call" or "{}-call" field.'''
+                .format(call_type))
         else:
-            self._update_script = None
+            self._update_call = None
 
     def initialize(self):
         self.set_logging(self.default_log_format,
                          self.default_log_level)
 
-        self.initialize_script('install', mandatory=True)
+        self.initialize_call('install', mandatory=True)
 
-        self.initialize_script('update')
-        if self._update_script is not None:
+        self.initialize_call('update')
+        if self._update_call is not None:
             self.update = self.update_wrapper
 
-        self.initialize_script('uninstall')
-        if self._uninstall_script is not None:
+        self.initialize_call('uninstall')
+        if self._uninstall_call is not None:
             self.uninstall = self.uninstall_wrapper
 
     def download(self, url, params=None, force=False):
@@ -313,10 +313,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self._install_script):
-                self._install_script()
+            if callable(self._install_call):
+                self._install_call()
             else:
-                exec(self._install_script) # pylint: disable=exec-used
+                exec(self._install_call) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             exc = True
@@ -343,10 +343,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self._update_script):
-                self._update_script()
+            if callable(self._update_call):
+                self._update_call()
             else:
-                exec(self._update_script) # pylint: disable=exec-used
+                exec(self._update_call) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             exc = True
@@ -368,10 +368,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
     def uninstall_wrapper(self):
         self.setup_logging()
         try:
-            if callable(self._uninstall_script):
-                self._uninstall_script()
+            if callable(self._uninstall_call):
+                self._uninstall_call()
             else:
-                exec(self._uninstall_script) # pylint: disable=exec-used
+                exec(self._uninstall_call) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             raise
@@ -626,7 +626,7 @@ class BaseGroupRecipe(BaseRecipe):
         self.update = self.update_wrapper
         self.subrecipes = dict()
 
-    def script(self, name, *args, **kwargs):
+    def call(self, name, *args, **kwargs):
         for group in self.subrecipes:
             attr = getattr(self.subrecipes[group], name, None)
             if callable(attr):
@@ -634,11 +634,11 @@ class BaseGroupRecipe(BaseRecipe):
             elif attr is not None:
                 exec(attr) # pylint: disable=exec-used
 
-    def install_script(self):
-        return self.script('install')
+    def install_call(self):
+        return self.call('install')
 
-    def update_script(self):
-        return self.script('update')
+    def update_call(self):
+        return self.call('update')
 
-    def uninstall_script(self):
-        return self.script('uninstall')
+    def uninstall_call(self):
+        return self.call('uninstall')

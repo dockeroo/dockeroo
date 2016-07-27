@@ -81,14 +81,15 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.processor = self.options.get('processor', self.platform)
         self.variant = self.options.get('variant', 'dockeroo')
         self.abi = self.options.get('abi', 'gnu')
-        self.script_user = self.options.get('script-user', None)
-        self.script_shell = self.options.get('script-shell', self.shell)
-        self.script = "#!{}\n{}".format(
-            self.script_shell,
+
+        self.assemble_script_user = self.options.get('assemble-script-user', None)
+        self.assemble_script_shell = self.options.get('assemble-script-shell', self.shell)
+        self.assemble_script = "#!{}\n{}".format(
+            self.assemble_script_shell,
             '\n'.join([_f for _f in [x.strip() for x in
-                                     self.options.get('script').replace('$$', '$').split('\n')]
+                                     self.options.get('assemble-script').replace('$$', '$').split('\n')]
                        if _f])) \
-            if self.options.get('script', None) is not None else None
+            if self.options.get('assemble-script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
         self.masks = [_f for _f in [x.strip() for x in
                                     self.options.get('mask', '').split('\n')]
@@ -189,11 +190,11 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         if self.layout:
             self.engine.load_layout(self.assemble_container, self.layout,
                                     uid=self.layout_uid, gid=self.layout_gid)
-        if self.script:
+        if self.assemble_script:
             if self.platform != self.machine.platform:
                 self.engine.config_binfmt(self.assemble_container, self.platform)
-            self.engine.run_script(self.assemble_container, self.script,
-                                   shell=self.script_shell, user=self.script_user)
+            self.engine.run_script(self.assemble_container, self.assemble_script,
+                                   shell=self.assemble_script_shell, user=self.assemble_script_user)
         self.engine.commit_container(self.assemble_container, self.name,
                                      command=self.command, user=self.user, labels=self.labels,
                                      expose=self.expose, volumes=self.volumes)
