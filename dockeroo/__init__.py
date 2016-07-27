@@ -1,5 +1,3 @@
-from builtins import range
-from builtins import object
 
 # -*- coding: utf-8 -*-
 #
@@ -32,8 +30,10 @@ import shutil
 import string
 import subprocess
 import sys
-from future.moves.urllib.parse import parse_qs
 
+from builtins import range # pylint: disable=redefined-builtin
+from builtins import object # pylint: disable=redefined-builtin
+from future.moves.urllib.parse import parse_qs
 from zc.buildout import UserError
 from zc.buildout.download import Download
 
@@ -85,8 +85,8 @@ class RecipeFilterset(object):
             try:
                 module = import_module("{}.{}".format(
                     base_module.__name__, module_name))
-            except Exception as e:
-                warn('''Unable to import module "{}": {}'''.format(module_name, e))
+            except Exception as exc: # pylint: disable=broad-except
+                warn('''Unable to import module "{}": {}'''.format(module_name, exc))
             else:
                 for fltr in [entry for entry in [getattr(module, entry) for entry in dir(module)] \
                              if inspect.isclass(entry) and
@@ -99,7 +99,7 @@ RecipeFilterset.preload_filters(filters)
 RecipeFilterset.preload_filters(filters_scm)
 
 
-class BaseRecipe(object):
+class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-instance-attributes
     loggers = [__name__, 'zc.buildout']
 
     def __init__(self, buildout, name, options):
@@ -111,6 +111,7 @@ class BaseRecipe(object):
         self.options.setdefault('name', name)
         self.filterset = RecipeFilterset(self)
         self.log_handler = logging.StreamHandler(sys.stdout)
+        self._save_logging = {}
         self.initialize()
 
     @classmethod
@@ -121,9 +122,9 @@ class BaseRecipe(object):
         self._save_logging = {}
         for logger in [logging.getLogger(x) for x in self.loggers]:
             self.save_logger(logger)
-            logging._acquireLock()
+            logging._acquireLock() # pylint: disable=protected-access
             logger.handlers = [self.log_handler]
-            logging._releaseLock()
+            logging._releaseLock() # pylint: disable=protected-access
             logger.propagate = False
 
     def restore_logging(self):
@@ -131,18 +132,18 @@ class BaseRecipe(object):
             self.restore_logger(logger)
 
     def save_logger(self, logger):
-        logging._acquireLock()
+        logging._acquireLock() # pylint: disable=protected-access
         self._save_logging['{}_handlers'.format(
             logger.name)] = list(logger.handlers)
-        logging._releaseLock()
+        logging._releaseLock() # pylint: disable=protected-access
         self._save_logging['{}_propagate'.format(
             logger.name)] = logger.propagate
 
     def restore_logger(self, logger):
-        logging._acquireLock()
+        logging._acquireLock() # pylint: disable=protected-access
         logger.handlers = self._save_logging.pop(
             '{}_handlers'.format(logger.name))
-        logging._releaseLock()
+        logging._releaseLock() # pylint: disable=protected-access
         logger.propagate = self._save_logging.pop(
             '{}_propagate'.format(logger.name))
 
@@ -280,32 +281,31 @@ class BaseRecipe(object):
 
     def install_wrapper(self):
         self.setup_logging()
-        exc = None
+        exc = False
         try:
-            for location in self.locations:
-                if os.path.exists(location):
-                    self.cleanup_paths.add(location)
-                    raise shutil.Error(
-                        '''Directory "{}" already exists'''.format(location))
+            for location in [l for l in self.locations if os.path.exists(l)]:
+                self.cleanup_paths.add(location)
+                raise shutil.Error(
+                    '''Directory "{}" already exists'''.format(location))
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
             if callable(self._install_script):
                 self._install_script()
             else:
-                exec(self._install_script)
-        except Exception as e:
-            exc = e
+                exec(self._install_script) # pylint: disable=exec-used
+        except Exception: # pylint: disable=broad-except
             self.restore_logging()
+            exc = True
             raise
         finally:
-            if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
-                for f in self.cleanup_paths:
-                    self.logger.info('Left path "%s" as requested', f)
+            if exc and string_as_bool(self.options.get('keep-on-error', False)):
+                for path in self.cleanup_paths:
+                    self.logger.info('Left path "%s" as requested', path)
             else:
-                for f in self.cleanup_paths:
-                    self.logger.debug('Cleaning up "%s"', f)
-                    self.rm(f)
+                for path in self.cleanup_paths:
+                    self.logger.debug('Cleaning up "%s"', path)
+                    self.rm(path)
         specs = self.options.get('specs', default=None)
         if specs is not None:
             self.check_specs(specs)
@@ -315,7 +315,7 @@ class BaseRecipe(object):
 
     def update_wrapper(self):
         self.setup_logging()
-        exc = None
+        exc = False
         try:
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
@@ -323,19 +323,19 @@ class BaseRecipe(object):
             if callable(self._update_script):
                 self._update_script()
             else:
-                exec(self._update_script)
-        except Exception as e:
-            exc = e
+                exec(self._update_script) # pylint: disable=exec-used
+        except Exception: # pylint: disable=broad-except
             self.restore_logging()
+            exc = True
             raise
         finally:
-            if exc is not None and string_as_bool(self.options.get('keep-on-error', False)):
-                for f in self.cleanup_paths:
-                    self.logger.info('Left path "%s" as requested', f)
+            if exc and string_as_bool(self.options.get('keep-on-error', False)):
+                for path in self.cleanup_paths:
+                    self.logger.info('Left path "%s" as requested', path)
             else:
-                for f in self.cleanup_paths:
-                    self.logger.debug('Cleaning up "%s"', f)
-                    self.rm(f)
+                for path in self.cleanup_paths:
+                    self.logger.debug('Cleaning up "%s"', path)
+                    self.rm(path)
         specs = self.options.get('specs', default=None)
         if specs is not None:
             self.check_specs(specs)
@@ -348,8 +348,8 @@ class BaseRecipe(object):
             if callable(self._uninstall_script):
                 self._uninstall_script()
             else:
-                exec(self._uninstall_script)
-        except Exception:
+                exec(self._uninstall_script) # pylint: disable=exec-used
+        except Exception: # pylint: disable=broad-except
             self.restore_logging()
             raise
         self.restore_logging()
@@ -371,21 +371,22 @@ class BaseRecipe(object):
         for command in command_list:
             if previous is not None:
                 kwargs['stdin'] = previous.stdout
-            p = subprocess.Popen(command, *args, **kwargs)
+            proc = subprocess.Popen(command, *args, **kwargs)
             if previous is not None:
                 previous.stdout.close()
-            subprocess_list.append((p, command))
+            subprocess_list.append((proc, command))
             run_list.append(' '.join(command))
-            previous = p
+            previous = proc
         self.logger.info('Running: "%s"', ' | '.join(run_list))
         subprocess_list.reverse()
-        [q[0].wait() for q in subprocess_list]
-        for q in subprocess_list:
-            if q[0].returncode != 0:
+        for proc, command in subprocess_list:
+            proc.wait()
+        for proc, command in subprocess_list:
+            if proc.returncode != 0:
                 raise UserError(
-                    '''Failed while running command "{}"'''.format(q[1]))
+                    '''Failed while running command "{}"'''.format(command))
 
-    def fail_if_path_exists(self, path):
+    def fail_if_path_exists(self, path): # pylint: disable=no-self-use
         if os.path.lexists(path):
             raise UserError(
                 '''Path "{}" exists, cannot continue'''.format(path))
@@ -412,17 +413,17 @@ class BaseRecipe(object):
                 self.logger.error('Error occurred when cleaning after error: "%s"', strerror)
             raise error
 
-    def mkdir(self, *paths):
+    def mkdir(self, *paths): # pylint: disable=no-self-use
         for path in paths:
             try:
                 os.makedirs(path)
-            except OSError as e:
-                if e.errno == errno.EEXIST and os.path.isdir(path):
+            except OSError as exc:
+                if exc.errno == errno.EEXIST and os.path.isdir(path):
                     pass
                 else:
                     raise
 
-    def rm(self, *paths):
+    def rm(self, *paths): # pylint: disable=no-self-use,invalid-name
         for path in paths:
             if os.path.isdir(path):
                 shutil.rmtree(path)
@@ -460,10 +461,10 @@ class BaseRecipe(object):
                      popen.stderr: stderr_log_level}
 
         def check_io():
-            for io in select([popen.stdout, popen.stderr], [], [], 1000)[0]:
-                line = io.readline().strip()
+            for iobuf in select([popen.stdout, popen.stderr], [], [], 1000)[0]:
+                line = iobuf.readline().strip()
                 if line:
-                    self.logger.log(log_level[io], '%s', line)
+                    self.logger.log(log_level[iobuf], '%s', line)
         while popen.poll() is None:
             check_io()
         check_io()
@@ -540,18 +541,18 @@ class BaseSubRecipe(object):
     def environment(self):
         config = self.environment_config.copy()
         env = {}
-        for k, v in os.environ.items():
-            change = config.pop(k, None)
+        for key, value in os.environ.items():
+            change = config.pop(key, None)
             if change is not None:
-                env[k] = change % os.environ
+                env[key] = change % os.environ
                 self.logger.info(
-                    '''Environment "{}" set to "{}"'''.format(k, env[k]))
+                    '''Environment "{}" set to "{}"'''.format(key, env[key]))
             else:
-                env[k] = v
-        for k, v in config.items():
+                env[key] = value
+        for key, value in config.items():
             self.logger.info(
-                '''Environment "{}" added with "{}"'''.format(k, v))
-            env[k] = v
+                '''Environment "{}" added with "{}"'''.format(key, value))
+            env[key] = value
         return env
 
     @property
@@ -613,7 +614,7 @@ class BaseGroupRecipe(BaseRecipe):
             if callable(attr):
                 attr(*args, **kwargs)
             else:
-                exec(attr)
+                exec(attr) # pylint: disable=exec-used
 
     def install_script(self):
         return self.script('install')

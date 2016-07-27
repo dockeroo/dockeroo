@@ -22,7 +22,7 @@ from subprocess import CalledProcessError
 from dockeroo.filters import RecipeFilter
 
 
-class PatchFilter(RecipeFilter):
+class PatchFilter(RecipeFilter): # pylint: disable=too-few-public-methods
     filter_category = 'patch'
 
     def __call__(self, path, params=None):

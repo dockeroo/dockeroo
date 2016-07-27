@@ -53,6 +53,9 @@ class BaseDownloadSubRecipe(BaseSourceSubRecipe):
             else:
                 source['url'] = source['path']
 
+    def process_source(self, source):
+        pass
+
     @staticmethod
     def check_source_path(source, key1, key2):
         return os.path.abspath(source[key1]) == os.path.abspath(source[key2])
@@ -103,7 +106,7 @@ class SetupDownloadSubRecipe(BaseDownloadSubRecipe):
 
     def prepare_source(self, source):
         destkey = 'download-path' if source.get(
-            'develop', False) == True else 'location'
+            'develop', False) is True else 'location'
         self.acquire_source(source, destkey=destkey)
         self.patch_source(source)
 

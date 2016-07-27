@@ -23,7 +23,7 @@ from dockeroo.docker import BaseDockerSubRecipe, Archive
 from dockeroo.utils import merge, string_as_bool
 
 
-class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe):
+class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
         super(DockerGentooBootstrapSubRecipe, self).initialize()
@@ -69,7 +69,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe):
                 archive.download(self.buildout)
             self.import_archives(self.name, *self.archives)
 
-        if not self.containers(all=True, name=self.container):
+        if not self.containers(include_stopped=True, name=self.container):
             self.create_container(self.container, self.name, command=self.command,
                                   privileged=True, tty=self.tty, volumes=self.volumes,
                                   volumes_from=self.volumes_from)

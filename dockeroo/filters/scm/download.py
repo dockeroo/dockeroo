@@ -39,7 +39,7 @@ REPO_TYPES = {
 class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
     filter_category = 'download'
 
-    def __call__(self, url, params=None, force=False): #pylint: disable=too-many-locals
+    def __call__(self, url, params=None, force=False): # pylint: disable=too-many-locals
         download = self.recipe.download_manager
         urlobj = urlparse(url)
         fragment_params = parse_qs(urlobj.fragment)
@@ -76,7 +76,7 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             ret.update(result)
         return ret
 
-    def download_git(self, urlobj, path, params=None, force=False): #pylint: disable=unused-argument
+    def download_git(self, urlobj, path, params=None, force=False): # pylint: disable=unused-argument
         url = urlobj.geturl()
         params = params or {}
         recursive = params.get('repository-recursive', False)
@@ -88,9 +88,9 @@ class ScmDownloadFilter(RecipeFilter, GitRecipeFilterMixin):
             if recursive:
                 command_args.append('--recursive')
             command_args += [quote(format(url)), quote(path)]
-            self._git('clone', command_args, verbose=verbose)
+            self.git_cmd('clone', command_args, verbose=verbose)
         else:
-            command_args=['origin']
+            command_args = ['origin']
             self._git('fetch', command_args, verbose=verbose, env={
                 'GIT_DIR': path,
             })

@@ -16,12 +16,14 @@
 # limitations under the License.
 
 
+import os
+
 from dockeroo import BaseGroupRecipe
 from dockeroo.docker import BaseDockerSubRecipe
 from dockeroo.utils import string_as_bool
 
 
-class SubRecipe(BaseDockerSubRecipe):
+class SubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
         super(SubRecipe, self).initialize()
@@ -52,10 +54,10 @@ class SubRecipe(BaseDockerSubRecipe):
         self.script_shell = self.options.get('script-shell', self.shell)
         self.script_user = self.options.get('script-user', None)
         self.script = "#!{}\n{}".format(
-            self.script_shell,'\n'.join([_f for _f in
-                                         [x.strip() for x in
-                                          self.options.get('script').replace('$$', '$').split('\n')]
-                                         if _f])) \
+            self.script_shell, os.linesep.join(
+                [_f for _f in [x.strip() for x in
+                               self.options.get('script').replace('$$', '$').splitlines()]
+                 if _f])) \
                 if self.options.get('script', None) is not None else None
         self.start = string_as_bool(self.options.get('start', True))
 

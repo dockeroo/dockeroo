@@ -320,7 +320,7 @@ redefining-builtins-modules=six.moves,future.builtins
 [CLASSES]
 
 # List of method names used to declare (i.e. assign) instance attributes.
-defining-attr-methods=__init__,__new__,setUp
+defining-attr-methods=__init__,__new__,setUp,initialize
 
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls

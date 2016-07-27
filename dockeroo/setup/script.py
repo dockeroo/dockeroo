@@ -54,6 +54,9 @@ class SetupScriptSubRecipe(BaseDownloadSubRecipe):
             self.update_script = self.options.get('script')
         self.index = get_index(self.index_url, self.find_links_urls)
 
+    def process_source(self, source):
+        pass
+
 
 class SetupScriptRecipe(SetupDownloadRecipe):
     """

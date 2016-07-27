@@ -23,7 +23,7 @@ from dockeroo.docker import BaseDockerSubRecipe
 from dockeroo.utils import string_as_bool
 
 
-class GentooDiskImageSubRecipe(BaseDockerSubRecipe):
+class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
         super(GentooDiskImageSubRecipe, self).initialize()

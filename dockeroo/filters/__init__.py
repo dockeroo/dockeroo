@@ -1,4 +1,3 @@
-from builtins import object
 
 # -*- coding: utf-8 -*-
 #
@@ -17,7 +16,10 @@ from builtins import object
 # limitations under the License.
 
 
-class RecipeFilter(object):
+from builtins import object # pylint: disable=redefined-builtin
+
+
+class RecipeFilter(object): # pylint: disable=too-few-public-methods
     def __init__(self, recipe):
         self.recipe = recipe
         self.logger = recipe.logger

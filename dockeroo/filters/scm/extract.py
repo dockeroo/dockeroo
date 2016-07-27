@@ -33,7 +33,7 @@ class ScmExtractFilter(RecipeFilter, GitRecipeFilterMixin):
             func = {
                 'git': self.extract_git,
             }[repo_type]
-        except Exception:
+        except Exception: # pylint: disable=broad-except
             return None
         else:
             func(path, extract_dir, params=params or {})
@@ -56,7 +56,7 @@ class ScmExtractFilter(RecipeFilter, GitRecipeFilterMixin):
         self.recipe.mkdir(dst)
         index_file = os.path.join(dst, '.git-index')
         if not os.path.exists(index_file):
-            self._git('read-tree', [quote(tree_spec)], env={
+            self.git_cmd('read-tree', [quote(tree_spec)], env={
                 'GIT_INDEX_FILE': index_file,
                 'GIT_DIR': src,
                 'GIT_WORK_TREE': dst,

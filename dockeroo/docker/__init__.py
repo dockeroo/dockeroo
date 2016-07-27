@@ -16,30 +16,24 @@
 # limitations under the License.
 
 
-import base64
+from __future__ import absolute_import
 from copy import deepcopy
-from collections import namedtuple
 from datetime import datetime
-from io import StringIO
-import json
 import logging
 import os
 import platform
 import re
 from shutil import rmtree
-import string
 from subprocess import Popen, PIPE, STDOUT
 import tarfile
 import tempfile
 import time
 
-from builtins import map
-from builtins import str
-from builtins import object
+from builtins import map # pylint: disable=redefined-builtin
+from builtins import str # pylint: disable=redefined-builtin
+from builtins import object # pylint: disable=redefined-builtin
 from distutils.dir_util import copy_tree
-from __future__ import absolute_import
 from future import standard_library
-from shellescape import quote
 import tzlocal
 from zc.buildout import UserError
 from zc.buildout.download import Download
@@ -47,7 +41,7 @@ from zc.buildout.download import Download
 from dockeroo import BaseRecipe, BaseSubRecipe
 from dockeroo.docker_machine import DockerMachine
 from dockeroo.utils import ExternalProcessError
-from dockeroo.utils import reify, parse_datetime, random_name, string_as_bool, listify
+from dockeroo.utils import reify, parse_datetime, random_name, listify
 
 standard_library.install_aliases()
 
@@ -89,13 +83,14 @@ class DockerProcess(Popen):
             args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, env=custom_env)
 
 
-class DockerRegistryLogin(object):
+class DockerRegistryLogin(object): # pylint: disable=too-few-public-methods
 
     def __init__(self, engine, registry, username, password):
         self.engine = engine
         self.registry = "https://{}/v1/".format(registry)
         self.username = username
         self.password = password
+        self.config_path = None
 
     def __enter__(self):
         self.config_path = tempfile.mkdtemp()
@@ -103,16 +98,18 @@ class DockerRegistryLogin(object):
                              ['login', '-u', self.username, '-p', self.password, self.registry],
                              config=self.config_path)
         if proc.wait() != 0:
-            raise ExternalProcessError("Error requesting \"docker login {}\"".format(self.registry), proc)
+            raise ExternalProcessError(
+                "Error requesting \"docker login {}\"".format(self.registry), proc)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         rmtree(self.config_path)
 
 
-class DockerEngine(object):
+class DockerEngine(object): # pylint: disable=too-many-public-methods
 
-    def __init__(self, logger=None, url=None, tlsverify=None, tlscertpath=None, machine_name=None, shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
+    def __init__(self, logger=None, url=None, tlsverify=None, tlscertpath=None, machine_name=None,
+                 shell='/bin/sh', timeout=DEFAULT_TIMEOUT):
         self.logger = logger or logging.getLogger(__name__)
         self.shell = shell
         self.timeout = timeout
@@ -148,14 +145,14 @@ class DockerEngine(object):
             >>> dm.client_environment['DOCKER_MACHINE_NAME'] == dm.machine.name
             True
         """
-        d = {
+        env = {
             'DOCKER_HOST': self.url,
             'DOCKER_TLS_VERIFY': str(int(self.tlsverify)),
             'DOCKER_CERT_PATH': self.tlscertpath,
         }
         if self.machine is not None:
-            d['DOCKER_MACHINE_NAME'] = self.machine.name
-        return d
+            env['DOCKER_MACHINE_NAME'] = self.machine.name
+        return env
 
     @property
     @reify
@@ -241,12 +238,13 @@ class DockerEngine(object):
     def build_dockerfile(self, tag, path, **kwargs):
         self.logger.info("Building Dockerfile from context \"%s\"", path)
         args = ['build', '-t', tag]
-        for k, v in kwargs.items():
-            args += ['--build-arg', '{}={}'.format(k, v)]
+        for key, value in kwargs.items():
+            args += ['--build-arg', '{}={}'.format(key, value)]
         args.append(path)
         proc = DockerProcess(self, args)
         if proc.wait() != 0:
-            raise ExternalProcessError("Error building Dockerfile from context \"{}\"".format(path), proc)
+            raise ExternalProcessError(
+                "Error building Dockerfile from context \"{}\"".format(path), proc)
 
     def clean_stale_images(self):
         for image in self.images(dangling='true'):
@@ -254,17 +252,19 @@ class DockerEngine(object):
         for image in self.images('<none>'):
             self.remove_image(image['image'])
 
-    def commit_container(self, container, image, command=None, user=None, labels=None, expose=None, volumes=None):
+    def commit_container(self, container, image, command=None, user=None,
+                         labels=None, expose=None, volumes=None):
         self.logger.info(
             "Committing container \"%s\" to image \"%s\"", container, image)
         args = ['commit']
         if command:
             args.append(
-                "--change='CMD [{}]'".format(', '.join(['"{}"'.format(x) for x in command.split()])))
+                "--change='CMD [{}]'".format(', '.join(
+                    ['"{}"'.format(x) for x in command.split()])))
         if user:
             args.append("--change='USER \"{}\"'".format(user))
-        for k, v in (labels or {}).items():
-            args.append("--change='LABEL \"{}\"=\"{}\"".format(k, v))
+        for key, value in (labels or {}).items():
+            args.append("--change='LABEL \"{}\"=\"{}\"".format(key, value))
         for port in expose or []:
             args.append("--change='EXPOSE {}'".format(port))
         if volumes:
@@ -276,32 +276,86 @@ class DockerEngine(object):
             raise ExternalProcessError(
                 "Error committing container \"{}\"".format(container), proc)
 
-    def config_binfmt(self, container, platform):
+    def config_binfmt(self, container, arch):
         self.run_cmd(
-            container, '[ -f /proc/sys/fs/binfmt_misc/register ] || mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc', privileged=True)
-        self.run_cmd(container, '[ -f /proc/sys/fs/binfmt_misc/{platform} ] || echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(platform=platform, binfmt={
-            'aarch64': r':{platform}:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'arm':     r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'armeb':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'alpha':   r':{platform}:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x26\x90:\xff\xff\xff\xff\xff\xfe\xfe\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'mips':    r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'mipsel':  r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'ppc':     r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x14:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'sh4':     r':{platform}:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfb\xff\xff\xff:/usr/bin/qemu-{platform}:',
-            'sh4eb':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-            'sparc':   r':{platform}:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x02:\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-{platform}:',
-        }[platform].format(platform=platform)), privileged=True)
+            container, '[ -f /proc/sys/fs/binfmt_misc/register ] || '
+                       'mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc', privileged=True)
+        self.run_cmd(
+            container,
+            '[ -f /proc/sys/fs/binfmt_misc/{arch} ] || '
+            'echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(arch=arch, binfmt={
+                'aarch64':
+                    r':{arch}:M::'
+                    '\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:'
+                    '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'arm':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:'
+                    '\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'armeb':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:'
+                    '\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'alpha':
+                    r':{arch}:M::'
+                    '\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x26\x90:'
+                    '\xff\xff\xff\xff\xff\xfe\xfe\xff\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'mips':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08:'
+                    '\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'mipsel':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08\x00:'
+                    '\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'ppc':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x14:'
+                    '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'sh4':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a\x00:'
+                    '\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xfb\xff\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'sh4eb':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a:'
+                    '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+                'sparc':
+                    r':{arch}:M::'
+                    '\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x02:'
+                    '\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    '\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    '/usr/bin/qemu-{arch}:',
+            }[arch].format(arch=arch)), privileged=True)
 
     @listify
-    def containers(self, all=False, **filters):
+    def containers(self, include_stopped=False, **filters):
         params = ['ID', 'Image', 'Command', 'CreatedAt', 'RunningFor',
                   'Ports', 'Status', 'Size', 'Names', 'Labels', 'Mounts']
         args = ['ps', '--format',
                 SEPARATOR.join(['{{{{.{}}}}}'.format(x) for x in params])]
-        if all:
+        if include_stopped:
             args.append('-a')
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
+        for key, value in filters.items():
+            args += ['-f', '{}={}'.format(key, value)]
         proc = DockerProcess(self, args, stdout=PIPE)
         for line in proc.stderr.read().splitlines():
             self.logger.error(line)
@@ -309,32 +363,32 @@ class DockerEngine(object):
         params_map = dict([(x, re.sub(
             '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
         for line in proc.stdout.read().splitlines():
-            d = {}
+            container = {}
             values = line.split(SEPARATOR)
-            for n, param in enumerate(params):
+            for num, param in enumerate(params):
                 if param in ['Labels', 'Mounts', 'Names', 'Ports']:
-                    d[params_map[param]] = values[n].split(',') if values[n] else []
+                    container[params_map[param]] = values[num].split(',') if values[num] else []
                     if param == 'Labels':
-                        d[params_map[param]] = [tuple(
-                            x.split('=')) for x in d[params_map[param]]]
+                        container[params_map[param]] = [tuple(
+                            x.split('=')) for x in container[params_map[param]]]
                     elif param == 'Ports':
-                        d[params_map[param]] = [tuple(
-                            x.split('->')) for x in d[params_map[param]]]
+                        container[params_map[param]] = [tuple(
+                            x.split('->')) for x in container[params_map[param]]]
                 elif param == 'Status':
-                    d[params_map[param]] = {
+                    container[params_map[param]] = {
                         'created': 'created',
                         'dead': 'dead',
                         'exited': 'exited',
                         'paused': 'paused',
                         'restarting': 'restarting',
                         'up': 'running',
-                    }[values[n].split(' ')[0].lower()]
+                    }[values[num].split(' ')[0].lower()]
                 elif param == 'CreatedAt':
-                    d[params_map[param]] = parse_datetime(values[n]).astimezone(
+                    container[params_map[param]] = parse_datetime(values[num]).astimezone(
                         tzlocal.get_localzone()).replace(tzinfo=None)
                 else:
-                    d[params_map[param]] = values[n] if values[n] else None
-            yield d
+                    container[params_map[param]] = values[num] if values[num] else None
+            yield container
 
     def copy_image_to_container(self, image, container, src, dst):
         tmp = random_name()
@@ -356,24 +410,24 @@ class DockerEngine(object):
         else:
             src_prefix = ''
 
-        def layout_filter(f):
+        def layout_filter(obj):
             if dst is not None:
-                if len(f.name) > len(src_prefix):
-                    f.name = os.path.join(dst, f.name[len(src_prefix):])
+                if len(obj.name) > len(src_prefix):
+                    obj.name = os.path.join(dst, obj.name[len(src_prefix):])
                 else:
-                    f.name = dst
-                if f.type == tarfile.LNKTYPE:
-                    if len(f.linkname) > len(src_prefix):
-                        f.linkname = os.path.join(
-                            dst, f.linkname[len(src_prefix):])
+                    obj.name = dst
+                if obj.type == tarfile.LNKTYPE:
+                    if len(obj.linkname) > len(src_prefix):
+                        obj.linkname = os.path.join(
+                            dst, obj.linkname[len(src_prefix):])
                     else:
-                        f.linkname = dst
-            return f
+                        obj.linkname = dst
+            return obj
         p_in = DockerProcess(self, ['cp', "{}:{}".format(
             container_src, src), "-"], stdout=PIPE)
         if dst_exec:
             p_out = DockerProcess(self, ['exec', '-i', container_dst, "tar", "-xpf",
-                           "-", "-C", "/"], stdin=PIPE)
+                                         "-", "-C", "/"], stdin=PIPE)
         else:
             p_out = DockerProcess(self, ['cp', "-", "{}:/".format(container_dst)], stdin=PIPE)
         tar_in = tarfile.open(fileobj=p_in.stdout, mode='r|')
@@ -389,23 +443,24 @@ class DockerEngine(object):
         p_in.stdout.close()
         p_out.stdin.close()
         if p_in.wait() != 0:
-            raise ExternalProcessError("Error processing path on container \"{}\"".format(container_src), p_in)
+            raise ExternalProcessError(
+                "Error processing path on container \"{}\"".format(container_src), p_in)
         if p_out.wait() != 0:
             raise ExternalProcessError(
                 "Error processing path on container \"{}\"".format(container_dst), p_out)
 
-    def create_container(self, container, image, command=None, privileged=False, run=False, tty=False, #pylint: disable=too-many-arguments,too-many-locals
-                         volumes=None, volumes_from=None, user=None, networks=None, links=None,
-                         network_aliases=None, env=None, ports=None):
-        if not any([x for x in self.containers(all=True) if container in x['names']]):
+    def create_container(self, container, image, command=None, privileged=False, run=False, # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
+                         tty=False, volumes=None, volumes_from=None, user=None, networks=None,
+                         links=None, network_aliases=None, env=None, ports=None):
+        if not any([x for x in self.containers(include_stopped=True) if container in x['names']]):
             self.logger.info("Creating container \"%s\"", container)
             args = ['create', '--name="{}"'.format(container)]
-            for k, v in (env or {}).items():
-                args += ['-e', "{}={}".format(k, v)]
-            for k, v in (ports or {}).items():
-                args += ['-p', "{}:{}".format(k, v)]
-            for k, v in (links or {}).items():
-                args += ['--link', "{}:{}".format(k, v)]
+            for key, value in (env or {}).items():
+                args += ['-e', "{}={}".format(key, value)]
+            for key, value in (ports or {}).items():
+                args += ['-p', "{}:{}".format(key, value)]
+            for key, value in (links or {}).items():
+                args += ['--link', "{}:{}".format(key, value)]
             for network in networks or []:
                 args += ['--network', network]
             for network_alias in network_aliases or []:
@@ -417,7 +472,7 @@ class DockerEngine(object):
             if user:
                 args += ['-u', user]
             if volumes:
-                args += ["--volume={}:{}".format(k, v) for k, v in volumes]
+                args += ["--volume={}:{}".format(key, value) for key, value in volumes]
             if volumes_from:
                 args.append("--volumes-from={}".format(volumes_from))
             args.append(image)
@@ -430,7 +485,8 @@ class DockerEngine(object):
         if run:
             self.start_container(container)
 
-    def create_network(self, network, driver='bridge', gateway=None, subnet=None, ip_range=None, ipv6=False, internal=False):
+    def create_network(self, network, driver='bridge', gateway=None, subnet=None,
+                       ip_range=None, ipv6=False, internal=False):
         self.logger.info("Creating network \"%s\"", network)
         args = ['network', 'create', '-d', driver]
         if gateway is not None:
@@ -487,8 +543,8 @@ class DockerEngine(object):
                   'CreatedSince', 'CreatedAt', 'Size']
         args = ['images', '--format',
                 SEPARATOR.join(['{{{{.{}}}}}'.format(x) for x in params])]
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
+        for key, value in filters.items():
+            args += ['-f', '{}={}'.format(key, value)]
         if name is not None:
             args.append(name)
         proc = DockerProcess(self, args, stdout=PIPE)
@@ -498,54 +554,54 @@ class DockerEngine(object):
         params_map = dict([(x, re.sub(
             '((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', x).lower()) for x in params])
         for line in proc.stdout.read().splitlines():
-            d = {}
+            image = {}
             values = line.split(SEPARATOR)
-            for n, param in enumerate(params):
+            for num, param in enumerate(params):
                 if param == 'CreatedAt':
-                    d[params_map[param]] = parse_datetime(values[n]).astimezone(
+                    image[params_map[param]] = parse_datetime(values[num]).astimezone(
                         tzlocal.get_localzone()).replace(tzinfo=None)
                 else:
-                    d[params_map[param]] = values[n] if values[
-                        n] and values[n] != '<none>' else None
-            if d['repository'] and d['tag']:
-                d['image'] = "{}:{}".format(d['repository'], d['tag'])
+                    image[params_map[param]] = values[num] \
+                        if values[num] and values[num] != '<none>' else None
+            if image['repository'] and image['tag']:
+                image['image'] = "{}:{}".format(image['repository'], image['tag'])
             else:
-                d['image'] = d['id']
-            yield d
+                image['image'] = image['id']
+            yield image
 
     def import_archives(self, image, *archives):
         paths = set()
         args = ['import', '-', image]
         proc = DockerProcess(self, args, stdin=PIPE)
         tar_out = tarfile.open(fileobj=proc.stdin, mode='w|')
+        def layout_filter(obj, arc):
+            if not obj.name.startswith(os.sep):
+                obj.name = "/{}".format(obj.name)
+            obj.name = os.path.normpath(obj.name)
+            if arc.prefix:
+                obj.name = os.path.join(
+                    arc.prefix, obj.name.lstrip(os.sep))
+            if obj.name.endswith('/') and len(obj.name) > 1:
+                obj.name = obj.name[:-1]
+            if obj.type == tarfile.LNKTYPE and obj.linkname:
+                if obj.linkname.startswith(".{}".format(os.sep)):
+                    obj.linkname = obj.linkname[1:]
+                if obj.linkname.startswith(os.sep) and arc.prefix:
+                    obj.linkname = os.path.join(
+                        arc.prefix, obj.linkname.lstrip(os.sep))
+                if obj.linkname.endswith('/') and len(obj.linkname) > 1:
+                    obj.linkname = obj.linkname[:-1]
+            return obj
         for archive in archives:
             self.logger.info("Importing archive \"%s\" into image \"%s:%s\"",
                              archive, image, archive.prefix or '/')
 
-            def layout_filter(f):
-                if not f.name.startswith(os.sep):
-                    f.name = "/{}".format(f.name)
-                f.name = os.path.normpath(f.name)
-                if archive.prefix:
-                    f.name = os.path.join(
-                        archive.prefix, f.name.lstrip(os.sep))
-                if f.name.endswith('/') and len(f.name) > 1:
-                    f.name = f.name[:-1]
-                if f.type == tarfile.LNKTYPE and f.linkname:
-                    if f.linkname.startswith(".{}".format(os.sep)):
-                        f.linkname = f.linkname[1:]
-                    if f.linkname.startswith(os.sep) and archive.prefix:
-                        f.linkname = os.path.join(
-                            archive.prefix, f.linkname.lstrip(os.sep))
-                    if f.linkname.endswith('/') and len(f.linkname) > 1:
-                        f.linkname = f.linkname[:-1]
-                return f
             tar_in = tarfile.open(name=archive.path, mode='r')
             if archive.prefix:
-                d = [os.sep]
-                for s in os.path.dirname(archive.prefix).split(os.sep):
-                    d.append(s)
-                    path = os.path.join(*d)
+                segments = [os.sep]
+                for segment in os.path.dirname(archive.prefix).split(os.sep):
+                    segments.append(segment)
+                    path = os.path.join(*segments)
                     if path in paths:
                         continue
                     tarinfo = tarfile.TarInfo(path)
@@ -555,7 +611,7 @@ class DockerEngine(object):
                     tarinfo.type = tarfile.DIRTYPE
                     tar_out.addfile(tarinfo)
                     paths.add(tarinfo.name)
-            for tarinfo in map(layout_filter, tar_in):
+            for tarinfo in [layout_filter(obj, archive) for obj in tar_in]: # pylint: disable=cell-var-from-loop
                 if tarinfo.name in paths:
                     continue
                 paths.add(tarinfo.name)
@@ -587,10 +643,10 @@ class DockerEngine(object):
         self.logger.info(
             "Importing path \"%s\" into image \"%s\"", path, image)
 
-        def layout_filter(f):
-            f.uid = 0
-            f.gid = 0
-            return f
+        def layout_filter(obj):
+            obj.uid = 0
+            obj.gid = 0
+            return obj
         args = ['import', '-', image]
         proc = DockerProcess(self, args, stdin=PIPE, stdout=FNULL)
         tar = tarfile.open(fileobj=proc.stdin, mode='w|')
@@ -601,22 +657,23 @@ class DockerEngine(object):
             raise ExternalProcessError(
                 "Error importing archive \"{}\" in image \"{}\"".format(path, image), proc)
 
-    def install_freeze(self, container, platform=None):
+    def install_freeze(self, container, arch=None):
         self.logger.info("Installing freeze on container \"%s\"", container)
 
-        def layout_filter(f):
-            f.uid = 0
-            f.gid = 0
-            return f
-        if platform is None:
-            platform = self.platform
+        def layout_filter(obj):
+            obj.uid = 0
+            obj.gid = 0
+            return obj
+        if arch is None:
+            arch = self.platform
         args = ['cp', '-', "{}:/".format(container)]
         proc = DockerProcess(self, args, stdin=PIPE)
         tar = tarfile.open(fileobj=proc.stdin, mode='w|')
-        tar.add(os.path.join(self.buildout['buildout'][
-                'bin-directory']), arcname="bin", filter=layout_filter, recursive=False)
+        tar.add(
+            os.path.join(self.buildout['buildout']['bin-directory']),
+            arcname="bin", filter=layout_filter, recursive=False)
         tar.add(os.path.join(os.path.dirname(__file__), 'freeze', 'freeze_{}'.format(
-            platform)), arcname="bin/freeze", filter=layout_filter)
+            arch)), arcname="bin/freeze", filter=layout_filter)
         tar.close()
         proc.stdin.close()
         if proc.wait() != 0:
@@ -627,12 +684,12 @@ class DockerEngine(object):
         self.logger.info(
             "Loading archive \"%s\" on container \"%s\"", name, container)
 
-        def layout_filter(f):
+        def layout_filter(obj):
             if uid is not None:
-                f.uid = uid
+                obj.uid = uid
             if gid is not None:
-                f.gid = gid
-            return f
+                obj.gid = gid
+            return obj
         args = ['cp', '-', "{}:{}".format(container, root)]
         proc = DockerProcess(self, args, stdin=PIPE)
         tar_in = tarfile.open(fileobj=fileobj, mode='r|*')
@@ -659,10 +716,10 @@ class DockerEngine(object):
         self.logger.info(
             "Loading layout \"%s\" on container \"%s\"", path, container)
 
-        def layout_filter(f):
-            f.uid = uid
-            f.gid = gid
-            return f
+        def layout_filter(obj):
+            obj.uid = uid
+            obj.gid = gid
+            return obj
         args = ['cp', '-', "{}:{}".format(container, root)]
         proc = DockerProcess(self, args, stdin=PIPE)
         tar = tarfile.open(fileobj=proc.stdin, mode='w|')
@@ -678,26 +735,27 @@ class DockerEngine(object):
     def networks(self, **filters):
         params = ['id', 'name', 'driver']
         args = ['network', 'ls']
-        for k, v in filters.items():
-            args += ['--filter', '{}={}'.format(k, v)]
+        for key, value in filters.items():
+            args += ['--filter', '{}={}'.format(key, value)]
         proc = DockerProcess(self, args, stdout=PIPE)
         if proc.wait() != 0:
-            raise ExternalProcessError("Error requesting \"docker {}\"".format(' '.join(args)), proc)
+            raise ExternalProcessError(
+                "Error requesting \"docker {}\"".format(' '.join(args)), proc)
         for line in proc.stdout.read().splitlines()[1:]:
-            d = {}
+            network = {}
             values = line.split()
-            for n, param in enumerate(params):
-                d[param] = values[n] if values[n] else None
-            yield d
+            for num, param in enumerate(params):
+                network[param] = values[num] if values[num] else None
+            yield network
 
-    def process_path(self, container, path, fn):
+    def process_path(self, container, path, func):
         self.logger.info(
             "Processing path \"%s\" on container \"%s\"", path, container)
         args = ['cp', "{}:{}".format(container, path), "-"]
         proc = DockerProcess(self, args, stdout=PIPE)
         tar = tarfile.open(fileobj=proc.stdout, mode='r|')
         for tarinfo in tar:
-            fn(tar, tarinfo)
+            func(tar, tarinfo)
         if proc.wait() != 0:
             raise ExternalProcessError(
                 "Error processing path on container \"{}\"".format(container), proc)
@@ -732,7 +790,7 @@ class DockerEngine(object):
 
     def remove_container(self, container):
         try:
-            status = list(self.containers(all=True, name=container))[0]['status']
+            status = list(self.containers(include_stopped=True, name=container))[0]['status']
         except IndexError:
             status = None
         if status in ['running', 'paused']:
@@ -749,7 +807,7 @@ class DockerEngine(object):
                     "Error removing container \"{}\"".format(container), proc)
 
     def remove_image(self, name):
-        for container in self.containers(all=True, ancestor=name):
+        for container in self.containers(include_stopped=True, ancestor=name):
             self.remove_container(container['names'][0])
         for image in self.images(name=name):
             proc = DockerProcess(self, ['rmi', image['image']], stdout=FNULL)
@@ -758,7 +816,7 @@ class DockerEngine(object):
                     "Error removing image \"{}\"".format(image['image']), proc)
 
     def remove_network(self, network):
-        for container in self.containers(all=True, network=network):
+        for container in self.containers(include_stopped=True, network=network):
             self.remove_container(container)
         self.logger.info("Removing network \"%s\"", network)
         proc = DockerProcess(self, ['network', 'rm', network], stdout=FNULL)
@@ -766,14 +824,15 @@ class DockerEngine(object):
             raise ExternalProcessError("Error removing network \"{}\"".format(network), proc)
 
     def remove_volume(self, volume):
-        for container in self.containers(all=True, volume=volume):
+        for container in self.containers(include_stopped=True, volume=volume):
             self.remove_container(container)
         self.logger.info("Removing volume \"%s\"", volume)
         proc = DockerProcess(self, ['volume', 'rm', volume], stdout=FNULL)
         if proc.wait() != 0:
             raise ExternalProcessError("Error removing volume \"{}\"".format(volume), proc)
 
-    def run_cmd(self, container, cmd, privileged=False, quiet=False, return_output=False, user=None):
+    def run_cmd(self, container, cmd, privileged=False,
+                quiet=False, return_output=False, user=None):
         if not quiet:
             self.logger.info(
                 "Running command \"%s\" on \"%s\"", cmd, container)
@@ -832,17 +891,18 @@ class DockerEngine(object):
     def volumes(self, **filters):
         params = ['driver', 'name']
         args = ['volume', 'ls']
-        for k, v in filters.items():
-            args += ['-f', '{}={}'.format(k, v)]
+        for key, value in filters.items():
+            args += ['-f', '{}={}'.format(key, value)]
         proc = DockerProcess(self, args, stdout=PIPE)
         if proc.wait() != 0:
-            raise ExternalProcessError("Error requesting \"docker {}\"".format(' '.join(args)), proc)
+            raise ExternalProcessError(
+                "Error requesting \"docker {}\"".format(' '.join(args)), proc)
         for line in proc.stdout.read().splitlines()[1:]:
-            d = {}
+            volume = {}
             values = line.split()
-            for n, param in enumerate(params):
-                d[param] = values[n] if values[n] else None
-            yield d
+            for num, param in enumerate(params):
+                volume[param] = values[num] if values[num] else None
+            yield volume
 
 class BaseDockerSubRecipe(BaseSubRecipe):
 

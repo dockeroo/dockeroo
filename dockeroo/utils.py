@@ -23,10 +23,10 @@ import random
 import re
 import string
 
-from builtins import range
-from builtins import object
+from builtins import range # pylint: disable=redefined-builtin
+from builtins import object # pylint: disable=redefined-builtin
 from decorator import decorate
-from past.builtins import basestring
+from past.builtins import basestring # pylint: disable=redefined-builtin
 from zc.buildout import UserError
 
 
@@ -71,7 +71,7 @@ class FixedOffset(tzinfo):
         name = sign + hhmm
         return cls(offset, name)
 
-class NonExistentOption(object):
+class NonExistentOption(object): # pylint: disable=too-few-public-methods
     pass
 
 class OptionGroup(object):
@@ -95,7 +95,7 @@ class OptionGroup(object):
         self.delete(key)
 
     def __iter__(self):
-        for key in self.repository._group_keys[self.group]:
+        for key in self.repository.group_keys[self.group]:
             yield key
 
     def get(self, key, default=None):
@@ -109,17 +109,17 @@ class OptionGroup(object):
 
     def set(self, key, value):
         self.repository.options[self._key(key)] = value
-        self.repository._group_keys[self.group].add(key)
+        self.repository.group_keys[self.group].add(key)
 
     def setdefault(self, key, value):
         self.repository.options.setdefault(self._key(key), value)
-        self.repository._group_keys[self.group].add(key)
+        self.repository.group_keys[self.group].add(key)
 
     def delete(self, key):
         del self.repository.options[self._key(key)]
-        self.repository._group_keys[self.group].discard(key)
-        if not self.repository._group_keys[self.group]:
-            del self.repository._group_keys[self.group]
+        self.repository.group_keys[self.group].discard(key)
+        if not self.repository.group_keys[self.group]:
+            del self.repository.group_keys[self.group]
 
     def copy(self):
         return dict([(k, self[k]) for k in self])
@@ -127,23 +127,23 @@ class OptionGroup(object):
 class OptionRepository(object):
     def __init__(self, options):
         self.options = options
-        self._groups = dict()
-        self._group_keys = defaultdict(set)
+        self.groups = dict()
+        self.group_keys = defaultdict(set)
         for option in self.options.keys():
             split = option.split('_', 1)
             if len(split) > 1:
-                self._group_keys[split[0]].add(split[1])
+                self.group_keys[split[0]].add(split[1])
             else:
-                self._group_keys[None].add(split[0])
+                self.group_keys[None].add(split[0])
 
     def __iter__(self):
-        return iter(self._group_keys)
+        return iter(self.group_keys)
 
     def __getitem__(self, group):
-        if group in self._group_keys:
-            if group not in self._groups:
-                self._groups[group] = OptionGroup(self, group)
-            return self._groups[group]
+        if group in self.group_keys:
+            if group not in self.groups:
+                self.groups[group] = OptionGroup(self, group)
+            return self.groups[group]
         else:
             raise KeyError
 
@@ -175,8 +175,8 @@ def random_name(size=8):
     return ''.join(random.SystemRandom().choice(string.ascii_lowercase + \
                                                 string.digits) for _ in range(size))
 
-def quote(string):
-    return '"{}"'.format(string.replace('"', '\\"'))
+def quote(strobj):
+    return '"{}"'.format(strobj.replace('"', '\\"'))
 
 def resolve_loglevel(level):
     if not level:
@@ -205,44 +205,44 @@ DATETIME_RE = re.compile(
 def parse_datetime(value):
     match = DATETIME_RE.match(value)
     if match:
-        kw = match.groupdict()
-        if kw['microsecond']:
-            kw['microsecond'] = kw['microsecond'].ljust(6, '0')
-        tzinfo = kw.pop('tzinfo')
-        if tzinfo == 'Z':
-            tzinfo = FixedOffset.fixed_timezone(0)
-        elif tzinfo is not None:
-            offset_mins = int(tzinfo[-2:]) if len(tzinfo) > 3 else 0
-            offset = 60 * int(tzinfo[1:3]) + offset_mins
-            if tzinfo[0] == '-':
+        kwargs = match.groupdict()
+        if kwargs['microsecond']:
+            kwargs['microsecond'] = kwargs['microsecond'].ljust(6, '0')
+        tzobj = kwargs.pop('tzinfo')
+        if tzobj == 'Z':
+            tzobj = FixedOffset.fixed_timezone(0)
+        elif tzobj is not None:
+            offset_mins = int(tzobj[-2:]) if len(tzobj) > 3 else 0
+            offset = 60 * int(tzobj[1:3]) + offset_mins
+            if tzobj[0] == '-':
                 offset = -offset
-            tzinfo = FixedOffset.fixed_timezone(offset)
-        kw = {k: int(v) for k, v in kw.items() if v is not None}
-        kw['tzinfo'] = tzinfo
-        return datetime(**kw)
+            tzobj = FixedOffset.fixed_timezone(offset)
+        kwargs = {k: int(v) for k, v in kwargs.items() if v is not None}
+        kwargs['tzinfo'] = tzobj
+        return datetime(**kwargs)
 
-def reify(f):
-    def _reify(f, *args, **kwargs):
-        if not hasattr(f, '_cache'):
-            setattr(f, '_cache', f(*args, **kwargs))
-        return f._cache
-    return decorate(f, _reify)
+def reify(func):
+    def _reify(func, *args, **kwargs):
+        if not hasattr(func, '_cache'):
+            setattr(func, '_cache', func(*args, **kwargs))
+        return getattr(func, '_cache')
+    return decorate(func, _reify)
 
-def listify(f):
-    def _listify(f, *args, **kwargs):
-        return list(f(*args, **kwargs))
-    return decorate(f, _listify)
+def listify(func):
+    def _listify(func, *args, **kwargs):
+        return list(func(*args, **kwargs))
+    return decorate(func, _listify)
 
-def string_as_bool(s):
-    if not isinstance(s, basestring):
-        return bool(s)
-    s = s.strip().lower()
-    if s in TRUE_SET:
+def string_as_bool(obj):
+    if not isinstance(obj, basestring):
+        return bool(obj)
+    obj = obj.strip().lower()
+    if obj in TRUE_SET:
         return True
-    elif s in FALSE_SET:
+    elif obj in FALSE_SET:
         return False
     else:
-        raise UserError('''Invalid string "{}", must be boolean'''.format(s))
+        raise UserError('''Invalid string "{}", must be boolean'''.format(obj))
 
 def uniq(seq):
     seen = set()

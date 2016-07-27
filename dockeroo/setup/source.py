@@ -21,9 +21,9 @@ import os
 import random
 import string
 
-from builtins import range
+from builtins import range # pylint: disable=redefined-builtin
 from future import standard_library
-from past.builtins import basestring
+from past.builtins import basestring # pylint: disable=redefined-builtin
 
 from dockeroo import BaseGroupRecipe, BaseSubRecipe
 from dockeroo.utils import reify
@@ -98,7 +98,7 @@ class BaseSourceSubRecipe(BaseSubRecipe):
     def prepare_source(self, source):
         self.recipe.mkdir(source['working-directory'])
         self.acquire_source(source, destkey='download-path'
-                            if source.get('develop', False) == True else 'working-directory')
+                            if source.get('develop', False) is True else 'working-directory')
         self.patch_source(source)
 
     def populate_source(self, source, load_options=True):

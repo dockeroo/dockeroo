@@ -17,36 +17,18 @@
 
 
 from __future__ import absolute_import
-import base64
-from copy import deepcopy
-from collections import namedtuple
-from datetime import datetime
-from io import StringIO
 import json
-import logging
 import os
 import platform
 import re
-from shutil import rmtree
-import string
 from subprocess import Popen, PIPE, STDOUT
-import tarfile
-import tempfile
-import time
 
-from builtins import map
-from builtins import str
-from builtins import object
-from distutils.dir_util import copy_tree
+from builtins import object # pylint: disable=redefined-builtin
 from future import standard_library
-from shellescape import quote
-import tzlocal
-from zc.buildout import UserError
-from zc.buildout.download import Download
 
 from dockeroo import BaseRecipe, BaseSubRecipe
 from dockeroo.utils import ExternalProcessError
-from dockeroo.utils import reify, parse_datetime, random_name, string_as_bool
+from dockeroo.utils import reify
 
 standard_library.install_aliases()
 
@@ -111,8 +93,8 @@ class DockerMachine(object):
             record = {}
             values = line.split(SEPARATOR)
             for num, param in enumerate(params):
-                record[params_map[param]] = values[num] if values[num] and
-                    values[num] != '<none>' else None
+                record[params_map[param]] = values[num] \
+                    if values[num] and values[num] != '<none>' else None
             ret.append(record)
         return ret
 

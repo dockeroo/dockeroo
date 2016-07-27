@@ -64,7 +64,7 @@ class FileDownloadFilter(RecipeFilter):
             'download-mode': 'file',
         }
 
-    def download_local(self, urlobj, md5sum=None, force=False): #pylint: disable=unused-argument
+    def download_local(self, urlobj, md5sum=None, force=False): # pylint: disable=unused-argument,no-self-use
         path = url2pathname(urlobj.path)
         if not os.path.exists(path):
             raise UserError('''Path "{}" doesn't exist.'''.format(path))

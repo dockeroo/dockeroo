@@ -16,13 +16,13 @@
 # limitations under the License.
 
 
-from builtins import object
+from builtins import object # pylint: disable=redefined-builtin
 from subprocess import CalledProcessError
 from zc.buildout import UserError
 
 
 class GitRecipeFilterMixin(object):
-    def _git(self, operation, args, ignore_errnos=None, verbose=False, **kwargs):
+    def git_cmd(self, operation, args, ignore_errnos=None, verbose=False, **kwargs):
         cmd_path = self.recipe.options.get(
             'git-binary', default=self.recipe.buildout.get('git-binary', default='git'))
         command = [cmd_path, operation]

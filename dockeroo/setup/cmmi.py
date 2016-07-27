@@ -21,27 +21,25 @@ import shlex
 from future import standard_library
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
-from dockeroo.utils import FALSE_SET
+from dockeroo.utils import FALSE_SET, reify
 
 standard_library.install_aliases()
 
 
 class SetupCmmiSubRecipe(BaseDownloadSubRecipe):
 
-    def update(self):
-        pass
 
-    def process_source(self, source):
-        if self.options.get_as_bool('build', False) is False:
-            return
-        preconfigure_command = self.options.get('preconfigure-command', None)
-        if preconfigure_command is not None:
-            preconfigure_command = shlex.split(preconfigure_command)
+    def preconfigure(self, source):
+        cmd = self.options.get('preconfigure-command', None)
+        if cmd is not None:
+            cmd = shlex.split(cmd)
             self.logger.info("Preconfiguring with: {}".format(
-                ' '.join(preconfigure_command)))
+                ' '.join(cmd)))
             self.recipe.call(
-                *preconfigure_command, cwd=source['source-directory'],
+                *cmd, cwd=source['source-directory'],
                 env=self.environment, shell=True)
+
+    def configure(self, source):
         configure_command = self.options.get('configure-command', None)
         if configure_command is None:
             configure_options = shlex.split(
@@ -58,15 +56,28 @@ class SetupCmmiSubRecipe(BaseDownloadSubRecipe):
             self.recipe.call(
                 *configure_command, cwd=source['source-directory'],
                 env=self.environment, shell=True)
-        make_binary = self.options.get('make-binary', None)
-        if make_binary is None:
-            make_binary = 'make'
-        elif make_binary.strip().lower() in FALSE_SET:
-            make_binary = None
+
+    @property
+    @reify
+    def make_binary(self):
+        ret = self.options.get('make-binary', None)
+        if ret is None:
+            return 'make'
+        elif ret.strip().lower() in FALSE_SET:
+            return None
         else:
-            make_binary = make_binary.strip()
-        if make_binary is not None:
-            make_command = [make_binary]
+            return ret.strip()
+
+    def update(self):
+        pass
+
+    def process_source(self, source):
+        if self.options.get_as_bool('build', False) is False:
+            return
+        self.preconfigure(source)
+        self.configure(source)
+        if self.make_binary is not None:
+            make_command = [self.make_binary]
             make_targets = shlex.split(self.options.get('make-targets', ''))
             make_command.extend(make_targets)
             make_options = shlex.split(self.options.get('make-options', ''))
@@ -78,7 +89,7 @@ class SetupCmmiSubRecipe(BaseDownloadSubRecipe):
                 env=self.environment, shell=True)
         make_install_binary = self.options.get('make-install-binary', None)
         if make_install_binary is None:
-            make_install_binary = make_binary
+            make_install_binary = self.make_binary
         elif make_install_binary.strip().lower() in FALSE_SET:
             make_install_binary = None
         else:

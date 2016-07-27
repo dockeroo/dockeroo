@@ -22,7 +22,7 @@ import setuptools
 from dockeroo.filters import RecipeFilter
 
 
-class ArchiveExtractFilter(RecipeFilter):
+class ArchiveExtractFilter(RecipeFilter): # pylint: disable=too-few-public-methods
     filter_category = 'extract.archive'
 
     def __call__(self, path, extract_dir, params=None):
@@ -31,7 +31,7 @@ class ArchiveExtractFilter(RecipeFilter):
             return None
         try:
             setuptools.archive_util.unpack_archive(path, extract_dir)
-        except Exception:
+        except Exception: # pylint: disable=broad-except
             return None
         else:
             return extract_dir

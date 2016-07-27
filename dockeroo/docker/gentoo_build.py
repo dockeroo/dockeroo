@@ -26,25 +26,28 @@ from dockeroo.docker import Archive, BaseDockerSubRecipe
 from dockeroo.utils import merge, string_as_bool
 
 
-class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
+class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instance-attributes
 
     def initialize(self):
         super(DockerGentooBuildSubRecipe, self).initialize()
 
         self.archives = []
-        for url, prefix, md5sum in
+        for url, prefix, md5sum in \
             [merge([None, None, None], x.split())[:3]
              for x in [f for f in
-                      [x.strip() for x in self.options.get(
-                       'archives', self.options.get('archive', '')).split('\n')]
-             if f]]:
+                       [x.strip() for x in \
+                            self.options.get(
+                                'archives', self.options.get('archive', '')).split('\n')]
+                       if f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
                 Archive(url=url, prefix=prefix, md5sum=md5sum))
 
-        self.accept_keywords = [f for f in [x.strip() for x in self.options.get('accept-keywords', '').split('\n')] if f]
-        self.build_dependencies = [f for f in [x.strip() for x in self.options.get('build-dependencies', '').split('\n')] if f]
+        self.accept_keywords = [f for f in [x.strip() for x in \
+            self.options.get('accept-keywords', '').split('\n')] if f]
+        self.build_dependencies = [f for f in [x.strip() for x in \
+            self.options.get('build-dependencies', '').split('\n')] if f]
         self.build_command = self.options.get('build-command', "/bin/freeze")
         self.build_container = "{}_build".format(self.name)
         self.build_layout = self.options.get('build-layout', None)
@@ -55,17 +58,24 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
         self.build_script_user = self.options.get('build-script-user', None)
         self.build_script_shell = self.options.get(
             'build-script-shell', self.shell)
-        self.build_script = "#!{}\n{}".format(self.build_script_shell,
-                                              '\n'.join([f for f in [x.strip() for x in self.options.get('build-script').replace('$$', '$').split('\n')] if f])) if self.options.get('build-script', None) is not None else None
+        self.build_script = "#!{}\n{}".format(
+            self.build_script_shell,
+            '\n'.join([f for f in [x.strip() for x in
+                                   self.options.get('build-script').replace('$$', '$').split('\n')]
+                       if f])) if self.options.get('build-script', None) is not None else None
 
         self.assemble_container = "{}_assemble".format(self.name)
-        self.copy = [merge([None, None], y.split()[:2]) for y in [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')] if f]]
+        self.copy = [merge([None, None], y.split()[:2]) for y in
+                     [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')]
+                      if f]]
         self.base_image = self.options.get('base-image', None)
         self.keep = string_as_bool(self.options.get('keep', False))
         self.layout = self.options.get('layout', None)
         self.layout_uid = self.options.get('layout-uid', 0)
         self.layout_gid = self.options.get('layout-gid', 0)
-        self.packages = [f for f in [x.strip() for x in self.options.get('packages', '').split('\n')] if f]
+        self.packages = [f for f in
+                         [x.strip() for x in self.options.get('packages', '').split('\n')]
+                         if f]
         self.platform = self.options.get('platform', self.machine.platform)
         self.arch = self.options.get('arch', self.platform)
         self.processor = self.options.get('processor', self.platform)
@@ -73,34 +83,57 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
         self.abi = self.options.get('abi', 'gnu')
         self.script_user = self.options.get('script-user', None)
         self.script_shell = self.options.get('script-shell', self.shell)
-        self.script = "#!{}\n{}".format(self.script_shell,
-                                        '\n'.join([_f for _f in [x.strip() for x in self.options.get('script').replace('$$', '$').split('\n')] if _f])) if self.options.get('script', None) is not None else None
+        self.script = "#!{}\n{}".format(
+            self.script_shell,
+            '\n'.join([_f for _f in [x.strip() for x in
+                                     self.options.get('script').replace('$$', '$').split('\n')]
+                       if _f])) \
+            if self.options.get('script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
-        self.masks = [_f for _f in [x.strip() for x in self.options.get('mask', '').split('\n')] if _f]
-        self.unmasks = [_f for _f in [x.strip() for x in self.options.get('unmask', '').split('\n')] if _f]
-        self.uses = [_f for _f in [x.strip() for x in self.options.get('use', '').split('\n')] if _f]
+        self.masks = [_f for _f in [x.strip() for x in
+                                    self.options.get('mask', '').split('\n')]
+                      if _f]
+        self.unmasks = [_f for _f in [x.strip() for x in
+                                      self.options.get('unmask', '').split('\n')]
+                        if _f]
+        self.uses = [_f for _f in [x.strip() for x in
+                                   self.options.get('use', '').split('\n')]
+                     if _f]
 
         self.command = self.options.get('command', "/bin/freeze")
         self.user = self.options.get('user', None)
-        self.labels = dict([y for y in [x.strip().split('=') for x in self.options.get('labels', '').split('\n')] if y[0]])
-        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').split('\n')] if _f]
+        self.labels = dict([y for y in [x.strip().split('=')
+                                        for x in self.options.get('labels', '').split('\n')]
+                            if y[0]])
+        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').split('\n')]
+                       if _f]
         self.volumes = [y for y in [x.strip().split(
             ':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
+
+    def add_package_modifier(self, name, modifiers):
+        for modifier in modifiers:
+            self.run_cmd(
+                self.build_container,
+                "chroot-{arch}-docker -c \"echo {modifier} >>/etc/portage/package.{name}\"".format(
+                    arch=self.arch, modifier=quote(modifier), name=name))
+
+    def create_base_image(self, name):
+        if self.archives:
+            for archive in self.archives:
+                archive.download(self.buildout)
+            self.import_archives(name, *self.archives)
+        else:
+            root = tempfile.mkdtemp()
+            self.import_path(root, name)
+            shutil.rmtree(root)
+        return name
 
     def install(self):
         if self.base_image:
             base_image = self.base_image
         else:
-            base_image = self.name
-            if self.archives:
-                for archive in self.archives:
-                    archive.download(self.buildout)
-                self.import_archives(base_image, *self.archives)
-            else:
-                root = tempfile.mkdtemp()
-                self.import_path(root, base_image)
-                shutil.rmtree(root)
+            base_image = self.create_base_image(self.name)
         self.remove_container(self.assemble_container)
         self.create_container(self.assemble_container, base_image, command="/bin/freeze",
                               privileged=True, tty=self.tty, volumes_from=self.volumes_from)
@@ -109,42 +142,46 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
 
         if self.build_image:
             self.remove_container(self.build_container)
-            self.create_container(self.build_container, self.build_image, command=self.build_command,
-                                  privileged=True, tty=self.tty, volumes_from=self.build_volumes_from)
+            self.create_container(self.build_container, self.build_image,
+                                  command=self.build_command,
+                                  privileged=True, tty=self.tty,
+                                  volumes_from=self.build_volumes_from)
             self.start_container(self.build_container)
             if self.platform != self.machine.platform:
                 self.config_binfmt(self.build_container, self.platform)
             if self.build_layout:
                 self.load_layout(self.build_container, self.build_layout)
-            for accept_keyword in self.accept_keywords:
-                self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"echo {accept_keyword} >>/etc/portage/package.accept_keywords\"".format(
-                    arch=self.arch, accept_keyword=quote(accept_keyword)))
-            for mask in self.masks:
-                self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"echo {mask} >>/etc/portage/package.mask\"".format(
-                    arch=self.arch, mask=quote(mask)))
-            for unmask in self.unmasks:
-                self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"echo {unmask} >>/etc/portage/package.unmask\"".format(
-                    arch=self.arch, unmask=quote(unmask)))
-            for use in self.uses:
-                self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"echo {use} >>/etc/portage/package.use\"".format(
-                    arch=self.arch, use=quote(use)))
-            self.run_cmd(self.build_container,
-                         "chroot-{arch}-docker -c \"eclean packages && emaint binhost --fix\"".format(arch=self.arch))
-            self.run_cmd(self.build_container, "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\"".format(arch=self.arch,
-                                                                                                                                           packages=' '.join(
-                                                                                                                                               self.build_dependencies + self.packages),
-                                                                                                                                           env=' '.join(['='.join(x) for x in self.build_env.items()])))
-            package_atoms = ["={}".format(self.run_cmd(self.build_container,
-                                                                          "chroot-{arch}-docker -c \"equery list --format=\"\\$cpv\" {package}\" | head -1".format(
-                                                                              arch=self.arch, package=package),
-                                                                          quiet=True, return_output=True)) for package in self.packages]
-            self.run_cmd(self.build_container, "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
-                arch=self.arch, packages=' '.join(package_atoms)))
+            self.add_package_modifier('accept_keywords', self.accept_keywords)
+            self.add_package_modifier('mask', self.masks)
+            self.add_package_modifier('unmask', self.unmasks)
+            self.add_package_modifier('use', self.uses)
+            self.run_cmd(
+                self.build_container,
+                "chroot-{arch}-docker -c \"eclean packages && emaint binhost --fix\""
+                .format(arch=self.arch))
+            self.run_cmd(
+                self.build_container,
+                "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
+                .format(arch=self.arch, packages=' '.join(self.build_dependencies + self.packages),
+                        env=' '.join(['='.join(x) for x in self.build_env.items()])))
+            package_atoms = ["={}".format(
+                self.run_cmd(
+                    self.build_container,
+                    "chroot-{arch}-docker -c \"equery list --format=\"\\$cpv\" {package}\" | "
+                    "head -1"
+                    .format(arch=self.arch, package=package),
+                    quiet=True, return_output=True)) for package in self.packages]
+            self.run_cmd(
+                self.build_container,
+                "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
+                    arch=self.arch, packages=' '.join(package_atoms)))
             if self.build_script:
                 self.run_script(self.build_container, self.build_script,
                                 shell=self.build_script_shell, user=self.build_script_user)
             self.copy_path(self.build_container, self.assemble_container,
-                           "/usr/{processor}-{variant}-linux-{abi}/dockeroo-root/".format(processor=self.processor, variant=self.variant, abi=self.abi), dst="/")
+                           "/usr/{processor}-{variant}-linux-{abi}/dockeroo-root/".format(
+                               processor=self.processor, variant=self.variant, abi=self.abi),
+                           dst="/")
             for src, dst in self.copy:
                 self.copy_path(self.build_container,
                                self.assemble_container, src, dst=dst)
@@ -158,12 +195,14 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe):
             self.run_script(self.assemble_container, self.script,
                             shell=self.script_shell, user=self.script_user)
         self.commit_container(self.assemble_container, self.name,
-                              command=self.command, user=self.user, labels=self.labels, expose=self.expose, volumes=self.volumes)
+                              command=self.command, user=self.user, labels=self.labels,
+                              expose=self.expose, volumes=self.volumes)
         self.remove_container(self.assemble_container)
         self.clean_stale_images()
         return self.mark_completed()
 
     def update(self):
+        # pylint: disable=too-many-boolean-expressions
         if (self.layout and self.is_layout_updated(self.layout)) or \
             (self.build_layout and self.is_layout_updated(self.build_layout)) or \
             (self.build_image and self.is_image_updated(self.build_image)) or \

@@ -16,7 +16,6 @@
 # limitations under the License.
 
 
-from builtins import str
 import logging
 import os
 import re
@@ -24,6 +23,7 @@ import string
 from copy import copy
 from tempfile import mkdtemp, mkstemp
 
+from builtins import str # pylint: disable=redefined-builtin
 from setuptools.command.setopt import edit_config as setuptools_edit_config
 from pkg_resources import WorkingSet, Environment, Requirement, DEVELOP_DIST
 from pkg_resources import SOURCE_DIST, EGG_DIST, BINARY_DIST
@@ -249,14 +249,14 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
                                       dir=source['source-directory'])
 
             action_args = []
-            if source.get('develop', False) == True:
+            if source.get('develop', False) is True:
                 action = 'develop'
                 action_args.append('-Z')
             else:
                 action = 'easy_install'
                 action_args.append(source['source-directory'])
 
-            args = [source['executable'],  setup_cmd, action, '-mxNd',
+            args = [source['executable'], setup_cmd, action, '-mxNd',
                     build_directory]
             if self.log_level < logging.INFO:
                 args += ['-v']
@@ -268,7 +268,8 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
             self.recipe.call(*args, stdout_log_level=logging.DEBUG)
             source['build-directory'] = build_directory
         finally:
-            [f() for f in reversed(undo)]
+            for obj in reversed(undo):
+                obj()
 
     def install_source(self, source, destkey='location'):
         if 'build-directory' not in source:
@@ -349,7 +350,7 @@ class SetupEggSubRecipe(BaseDownloadSubRecipe):
         for key in ('patches', 'patch-options', 'patch-binary'):
             if key in source:
                 struct.append(source[key])
-        struct = tuple(struct)
+        struct = tuple(struct) # pylint: disable=redefined-variable-type
         if not struct:
             return None
         base = string.digits + string.letters
