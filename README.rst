@@ -6,8 +6,8 @@ dockeroo is a series of buildout_ recipes to build and manage docker containers 
 
 dockeroo can build docker images from a classic Dockerfile or use a Gentoo_ container to assemble multiple Gentoo binary packages into a docker image.
 
-.. _docker.buildout: http://www.buildout.org/
-.. _docker.Gentoo: http://www.gentoo.org/
+.. _buildout: http://www.buildout.org/
+.. _Gentoo: http://www.gentoo.org/
 
 Useful links
 ============
@@ -31,7 +31,7 @@ Copyright © 2016, Giacomo Cariello <info@dockeroo.com>
 
 dockeroo is released under Apache 2.0 License. See `LICENSE.rst`_ for complete license.
 
-.. _docker.LICENSE.rst: LICENSE.rst
+.. _LICENSE.rst: LICENSE.rst
 
 Requirements
 ============
@@ -142,7 +142,7 @@ docker.gentoo-bootstrap recipe
 ==============================
 
 This recipe creates a docker image that contains a full operating system (typically Gentoo).
-Such builder image can be used to create further docker images with `gentoo-build`_ recipe.
+Such builder image can be used to create further docker images with `docker.gentoo-build`_ recipe.
 
 The recipe executes the following tasks:
 
@@ -218,7 +218,7 @@ To use the above part, several other files are necessary, to be copied in via **
     /usr/x86_64-docker-linux-gnu/etc/locale.gen
     /usr/x86_64-docker-linux-gnu/etc/portage/make.conf
 
-Here's an example of chroot-x86_64-docker script, useful to build docker images with `gentoo-build`_:
+Here's an example of chroot-x86_64-docker script, useful to build docker images with `docker.gentoo-build`_:
 
 .. code-block:: bash
 
@@ -323,7 +323,7 @@ Usage
 -----
 
 The following example buildout part shows how to build a base image
-using a **builder** image produced with `gentoo-bootstrap`_.
+using a **builder** image produced with `docker.gentoo-bootstrap`_.
 
 .. code-block:: ini
 
@@ -510,7 +510,7 @@ Usage
 -----
 
 The following example buildout part shows how to build a linux disk image
-from a **base** image using a **builder** image produced with `gentoo-bootstrap`_.
+from a **base** image using a **builder** image produced with `docker.gentoo-bootstrap`_.
 
 .. code-block:: ini
 
