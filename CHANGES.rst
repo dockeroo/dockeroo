@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.17 (24-07-2016)
+-----------------
+
+Added dockeroo.setup recipes.
+Refactored testing.
+Renamed all recipes.
+Major round of refactoring/convention check.
+
+
 0.16 (24-07-2016)
 -----------------
 

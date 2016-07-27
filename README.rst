@@ -6,8 +6,8 @@ dockeroo is a series of buildout_ recipes to build and manage docker containers 
 
 dockeroo can build docker images from a classic Dockerfile or use a Gentoo_ container to assemble multiple Gentoo binary packages into a docker image.
 
-.. _buildout: http://www.buildout.org/
-.. _Gentoo: http://www.gentoo.org/
+.. _docker.buildout: http://www.buildout.org/
+.. _docker.Gentoo: http://www.gentoo.org/
 
 Useful links
 ============
@@ -31,7 +31,7 @@ Copyright © 2016, Giacomo Cariello <info@dockeroo.com>
 
 dockeroo is released under Apache 2.0 License. See `LICENSE.rst`_ for complete license.
 
-.. _LICENSE.rst: LICENSE.rst
+.. _docker.LICENSE.rst: LICENSE.rst
 
 Requirements
 ============
@@ -53,22 +53,22 @@ Contents
 
 dockeroo contains the following buildout recipes:
 
-* build_: creates an image from a Dockerfile.
-* copy_: copies files between containers.
-* `gentoo-bootstrap`_: builds a gentoo builder image.
-* `gentoo-build`_: creates an image from a gentoo builder.
-* `gentoo-diskimage`_: generates a disk image from a docker image.
-* network_: creates a docker network.
-* pull_: pulls an image from a registry.
-* push_: pushes an image to a registry.
-* run_: runs a docker container.
-* volume_: creates a docker volume.
+* docker.build_: creates an image from a Dockerfile.
+* docker.copy_: copies files between containers.
+* `docker.gentoo-bootstrap`_: builds a gentoo builder image.
+* `docker.gentoo-build`_: creates an image from a gentoo builder.
+* `docker.gentoo-diskimage`_: generates a disk image from a docker image.
+* docker.network_: creates a docker network.
+* docker.pull_: pulls an image from a registry.
+* docker.push_: pushes an image to a registry.
+* docker.run_: runs a docker container.
+* docker.volume_: creates a docker volume.
 
 
-.. _build:
+.. _docker.build:
 
-build recipe
-============
+docker.build recipe
+===================
 
 This recipe creates a docker image by building a Dockerfile using **docker build**.
 
@@ -80,7 +80,7 @@ The following example buildout part creates a docker image of ubuntu.
 .. code-block:: ini
 
     [ubuntu]
-    recipe = dockeroo:build
+    recipe = dockeroo:docker.build
     source = git@github.com:dockerfile/ubuntu.git
 
 Configuration options
@@ -96,10 +96,10 @@ build-args
     List of build arguments, one per line, expressed as KEY=VALUE.
 
 
-.. _copy:
+.. _docker.copy:
 
-copy recipe
-===========
+docker.copy recipe
+==================
 
 This recipe copies a list of paths from a container to another.
 
@@ -113,7 +113,7 @@ is also copied to /bin/bash on **dst** container.
 .. code-block:: ini
 
     [copy_part]
-    recipe = dockeroo:copy
+    recipe = dockeroo:docker.copy
     container-from = src
     container-to = dst
     paths =
@@ -136,10 +136,10 @@ paths
    append destination path on the same line, separated by space.
 
 
-.. _gentoo-bootstrap:
+.. _docker.gentoo-bootstrap:
 
-gentoo-bootstrap recipe
-=======================
+docker.gentoo-bootstrap recipe
+==============================
 
 This recipe creates a docker image that contains a full operating system (typically Gentoo).
 Such builder image can be used to create further docker images with `gentoo-build`_ recipe.
@@ -169,7 +169,7 @@ The following example buildout part shows how to build a full Gentoo amd64 docke
     crossdev-gentoo-profile = no-multilib
     crossdev-gentoo-platform = amd64
     crossdev-gentoo-platform-flavor = amd64
-    recipe = dockeroo:gentoo-bootstrap
+    recipe = dockeroo:docker.gentoo-bootstrap
     image = dockeroo/builder_${:crossdev-arch}:latest
     container = dockeroo_builder_${:crossdev-arch}
     volumes-from = ${distfiles:container}
@@ -311,10 +311,10 @@ volumes-from
     Mount volumes from specified container.
 
 
-.. _gentoo-build:
+.. _docker.gentoo-build:
 
-gentoo-build recipe
-===================
+docker.gentoo-build recipe
+==========================
 
 This recipe builds a docker image by assembling an optional base image,
 a layout and a list of Gentoo binary packages.
@@ -327,7 +327,7 @@ using a **builder** image produced with `gentoo-bootstrap`_.
 
 .. code-block:: ini
 
-    recipe = dockeroo:gentoo-build
+    recipe = dockeroo:docker.gentoo-build
     layout = ${buildout:directory}/base
     use =
         sys-apps/busybox static
@@ -493,10 +493,10 @@ volumes-from
     Mount volumes from specified container.
 
 
-.. _gentoo-diskimage:
+.. _docker.gentoo-diskimage:
 
-gentoo-diskimage recipe
-=======================
+docker.gentoo-diskimage recipe
+==============================
 
 This recipe executes the following tasks:
 
@@ -515,7 +515,7 @@ from a **base** image using a **builder** image produced with `gentoo-bootstrap`
 .. code-block:: ini
 
     [disk-image]
-    recipe = dockeroo:gentoo-diskimage
+    recipe = dockeroo:docker.gentoo-diskimage
     build-image = builder:latest
     base-image = base:latest
     build-root = /mnt/
@@ -590,10 +590,10 @@ timeout
    **docker** command timeout.
 
 
-.. _network:
+.. _docker.network:
 
-network recipe
-==============
+docker.network recipe
+=====================
 
 This recipe creates a new network if it doesn't exist.
 
@@ -605,7 +605,7 @@ The following example buildout part creates a network named "internal_network".
 .. code-block:: ini
 
     [internal_network]
-    recipe = dockeroo:network
+    recipe = dockeroo:docker.network
     subnet = 10.0.0.0/8
     gateway = 10.0.0.1
     ip-range = 10.0.1.0/24
@@ -644,10 +644,10 @@ timeout
    **docker** command timeout.
 
 
-.. _pull:
+.. _docker.pull:
 
-pull recipe
-===========
+docker.pull recipe
+==================
 
 This recipe calls **docker pull** with appropriate parameters.
 If **username** and **password** are specified, **docker login** is called prior to pulling.
@@ -660,7 +660,7 @@ The following example buildout part pulls **ubuntu** image from DockerHub.
 .. code-block:: ini
 
     [ubuntu]
-    recipe = dockeroo:pull
+    recipe = dockeroo:docker.pull
     image = ubuntu
 
 Configuration options
@@ -690,10 +690,10 @@ timeout
    **docker** command timeout.
 
 
-.. _push:
+.. _docker.push:
 
-push recipe
-===========
+docker.push recipe
+==================
 
 This recipe calls **docker push** with appropriate parameters.
 **docker login** is called prior to pushing.
@@ -706,7 +706,7 @@ The following example buildout part pushes **my_image** to DockerHub.
 .. code-block:: ini
 
     [my_image_pull]
-    recipe = dockeroo:push
+    recipe = dockeroo:docker.push
     image = my_image
     username = my_dockerhub_username
     password = my_dockerhub_password
@@ -735,10 +735,10 @@ timeout
    **docker** command timeout.
 
 
-.. _run:
+.. _docker.run:
 
-run recipe
-==========
+docker.run recipe
+=================
 
 This recipe executes the following tasks:
 
@@ -756,7 +756,7 @@ from a **nginx:latest** image.
 .. code-block:: ini
 
     [nginx]
-    recipe = dockeroo:run
+    recipe = dockeroo:docker.run
     container = nginx
     image = nginx:latest
 
@@ -816,10 +816,10 @@ volumes-from
     Mount volumes from specified container.
 
 
-.. _volume:
+.. _docker.volume:
 
-volume recipe
-=============
+docker.volume recipe
+====================
 
 This recipe creates a new volume if it doesn't exist.
 
@@ -831,7 +831,7 @@ The following example buildout part creates a volume named "distfiles_volume".
 .. code-block:: ini
 
     [distfiles_volume]
-    recipe = dockeroo:volume
+    recipe = dockeroo:docker.volume
     keep = true
 
 Configuration options
