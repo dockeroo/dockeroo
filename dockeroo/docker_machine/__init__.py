@@ -108,3 +108,7 @@ class DockerMachine(object):
                 "Error running command \"{}\" on machine \"{}\"".format(cmd, self.name), proc)
         if return_output:
             return proc.stdout.read().strip()
+
+
+class BaseDockerMachineSubRecipe(BaseSubRecipe):
+    pass

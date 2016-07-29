@@ -31,7 +31,7 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
         self.source = self.options['source']
         self.build_args = dict([
             y for y in [x.strip().split('=', 1)
-                        for x in self.options.get('build-args', '').split('\n')] if y[0]])
+                        for x in self.options.get('build-args', '').splitlines()] if y[0]])
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):

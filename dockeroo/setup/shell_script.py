@@ -16,30 +16,17 @@
 # limitations under the License.
 
 
+import os
+from subprocess import Popen, PIPE
+
 from zc.buildout import UserError
-from zc.buildout.easy_install import default_index_url, _get_index as get_index
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
-from dockeroo.utils import reify
 
 
-class SetupScriptSubRecipe(BaseDownloadSubRecipe):
-
-    @property
-    @reify
-    def index_url(self):
-        return self.options.get('index',
-                                self.recipe.buildout['buildout'].get('index',
-                                                                     default_index_url))
-
-    @property
-    @reify
-    def find_links_urls(self):
-        return self.options.get('find-links',
-                                self.recipe.buildout['buildout'].get('find-links', '')).split()
-
+class SetupShellScriptSubRecipe(BaseDownloadSubRecipe):
     def initialize(self):
-        super(SetupScriptSubRecipe, self).initialize()
+        super(SetupShellScriptSubRecipe, self).initialize()
         if 'install-script' in self.options:
             self.install_script = self.options.get('install-script')
         elif 'script' in self.options:
@@ -52,13 +39,39 @@ class SetupScriptSubRecipe(BaseDownloadSubRecipe):
             self.update_script = self.options.get('update-script')
         elif 'script' in self.options:
             self.update_script = self.options.get('script')
-        self.index = get_index(self.index_url, self.find_links_urls)
+        else:
+            self.update_script = None
 
-    def process_source(self, source):
-        pass
+        self.script_shell = self.options.get('script-shell', self.recipe.shell)
+        self.script_env = dict([y for y in [x.strip().split(
+            '=') for x in self.options.get('script-env', '').splitlines()] if y[0]])
+        self.script = "#!{}\n{}".format(
+            self.script_shell,
+            '\n'.join([_f for _f in \
+                [x.strip() for x in \
+                 self.options.get('script').replace('$$', '$').splitlines()]
+                       if _f])) \
+            if self.options.get('script', None) is not None else None
 
 
-class SetupScriptRecipe(SetupDownloadRecipe):
+    def run_script(self, script):
+        proc = Popen(self.script_shell, stdin=PIPE, stderr=PIPE, close_fds=True)
+        proc.stdin.write(script)
+        proc.stdin.close()
+        if proc.wait() != 0:
+            raise ExternalProcessError(
+                "Error running script \"{}\"".format(self.name), proc)
+
+    def install(self):
+        super(SetupShellScriptSubRecipe, self).install()
+        self.run_script(self.install_script)
+
+    def upgrade(self):
+        super(SetupShellScriptSubRecipe, self).upgrade()
+        self.run_script(self.update_script)
+
+
+class SetupShellScriptRecipe(SetupDownloadRecipe):
     """
     A recipe to run an installation script.
 
@@ -69,11 +82,12 @@ class SetupScriptRecipe(SetupDownloadRecipe):
         ... parts = part
         ...
         ... [part]
-        ... recipe = dockeroo:setup.script
-        ... script =
+        ... recipe = dockeroo:setup.shell-script
+        ... script = echo "HELLO."
         ... ''') as b:
         ...     print_(b.run(), end='')
         Installing part.
+        HELLO.
     """
 
-    subrecipe_class = SetupScriptSubRecipe
+    subrecipe_class = SetupShellScriptSubRecipe

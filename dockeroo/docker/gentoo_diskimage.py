@@ -39,13 +39,13 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
             self.build_script_shell, '\n'.join(
                 [_f for _f in
                  [x.strip() for x in
-                  self.options.get('prepare-script').replace('$$', '$').split('\n')]
+                  self.options.get('prepare-script').replace('$$', '$').splitlines()]
                  if _f])) if self.options.get('prepare-script', None) is not None else None
         self.build_script = "#!{}\n{}".format(
             self.build_script_shell, '\n'.join(
                 [_f for _f in
                  [x.strip() for x in
-                  self.options.get('build-script').replace('$$', '$').split('\n')]
+                  self.options.get('build-script').replace('$$', '$').splitlines()]
                  if _f])) if self.options.get('build-script', None) is not None else None
         self.build_root = self.options['build-root']
         self.base_image = self.options['base-image']

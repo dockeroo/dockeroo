@@ -91,7 +91,6 @@ class RecipeFilterset(object):
                              if inspect.isclass(entry) and
                              issubclass(entry, RecipeFilter) and
                              hasattr(entry, 'filter_category') and entry.filter_category]:
-
                     FILTERS.append(fltr)
 
 RecipeFilterset.preload_filters(filters)
@@ -249,35 +248,36 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
         except ValueError:
             raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
-    def initialize_call(self, call_type, mandatory=False):
+    def initialize_target(self, target, mandatory=False):
         if 'update-call' in self.options[None]:
-            setattr(self, '_{}_call'.format(call_type),
-                    self.options.get('{}-call'.format(call_type)))
+            setattr(self, '_{}_target'.format(target),
+                    self.options.get('{}-target'.format(target)))
         elif 'call' in self.options[None]:
-            setattr(self, '_{}_call'.format(call_type),
-                    self.options.get('call'))
-        elif hasattr(self, '{}_call'.format(call_type)):
-            setattr(self, '_{}_call'.format(call_type),
-                    getattr(self, '{}_call'.format(call_type)))
+            setattr(self, '_{}_target'.format(target),
+                    self.options.get('target'))
+        elif hasattr(self, '{}_target'.format(target)):
+            setattr(self, '_{}_target'.format(target),
+                    getattr(self, '{}_target'.format(target)))
         elif mandatory:
             raise UserError(
                 '''You must provide a "call" or "{}-call" field.'''
-                .format(call_type))
+                .format(target))
         else:
-            self._update_call = None
+            self._update_target = None
 
     def initialize(self):
         self.set_logging(self.default_log_format,
                          self.default_log_level)
+        self.shell = self.options.get('shell', '/bin/sh')
 
-        self.initialize_call('install', mandatory=True)
+        self.initialize_target('install', mandatory=True)
 
-        self.initialize_call('update')
-        if self._update_call is not None:
+        self.initialize_target('update')
+        if self._update_target is not None:
             self.update = self.update_wrapper
 
-        self.initialize_call('uninstall')
-        if self._uninstall_call is not None:
+        self.initialize_target('uninstall')
+        if self._uninstall_target is not None:
             self.uninstall = self.uninstall_wrapper
 
     def download(self, url, params=None, force=False):
@@ -313,10 +313,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self._install_call):
-                self._install_call()
+            if callable(self._install_target):
+                self._install_target()
             else:
-                exec(self._install_call) # pylint: disable=exec-used
+                exec(self._install_target) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             exc = True
@@ -343,10 +343,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             for working_directory in self.working_directories:
                 self.mkdir(working_directory)
                 self.cleanup_paths.add(working_directory)
-            if callable(self._update_call):
-                self._update_call()
+            if callable(self._update_target):
+                self._update_target() # pylint: disable=not-callable
             else:
-                exec(self._update_call) # pylint: disable=exec-used
+                exec(self._update_target) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             exc = True
@@ -368,10 +368,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
     def uninstall_wrapper(self):
         self.setup_logging()
         try:
-            if callable(self._uninstall_call):
-                self._uninstall_call()
+            if callable(self._uninstall_target):
+                self._uninstall_target()
             else:
-                exec(self._uninstall_call) # pylint: disable=exec-used
+                exec(self._uninstall_target) # pylint: disable=exec-used
         except Exception: # pylint: disable=broad-except
             self.restore_logging()
             raise
@@ -597,6 +597,17 @@ class BaseSubRecipe(object):
         self.recipe.set_logging(self.log_format,
                                 self.log_level)
 
+    @property
+    @reify
+    def completed(self):
+        return os.path.join(self.location, '.completed')
+
+    def mark_completed(self, files=None):
+        self.recipe.mkdir(self.location)
+        with open(self.completed, 'a'):
+            os.utime(self.completed, None)
+        return (files or []) + [self.completed]
+
 
 class BaseGroupRecipe(BaseRecipe):
     subrecipe_class = NotImplemented
@@ -626,7 +637,7 @@ class BaseGroupRecipe(BaseRecipe):
         self.update = self.update_wrapper
         self.subrecipes = dict()
 
-    def call(self, name, *args, **kwargs):
+    def run_target(self, name, *args, **kwargs):
         for group in self.subrecipes:
             attr = getattr(self.subrecipes[group], name, None)
             if callable(attr):
@@ -634,11 +645,11 @@ class BaseGroupRecipe(BaseRecipe):
             elif attr is not None:
                 exec(attr) # pylint: disable=exec-used
 
-    def install_call(self):
-        return self.call('install')
+    def install_target(self):
+        return self.run_target('install')
 
-    def update_call(self):
-        return self.call('update')
+    def update_target(self):
+        return self.run_target('update')
 
-    def uninstall_call(self):
-        return self.call('uninstall')
+    def uninstall_target(self):
+        return self.run_target('uninstall')

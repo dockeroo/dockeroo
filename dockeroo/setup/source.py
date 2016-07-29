@@ -56,14 +56,17 @@ class BaseSourceSubRecipe(BaseSubRecipe):
         for source in self.sources:
             self.populate_source(source)
 
-    def install(self):
+    def install_sources(self):
         for source in self.sources:
             self.prepare_source(source)
         for source in self.sources:
             self.process_source(source)
 
+    def install(self):
+        self.install_sources()
+
     def update(self):
-        self.install()
+        self.install_sources()
 
     @classmethod
     def resolve_stage(cls, option, stage=None):

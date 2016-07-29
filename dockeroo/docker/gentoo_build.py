@@ -37,7 +37,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
              for x in [f for f in
                        [x.strip() for x in \
                             self.options.get(
-                                'archives', self.options.get('archive', '')).split('\n')]
+                                'archives', self.options.get('archive', '')).splitlines()]
                        if f]]:
             if prefix == '/':
                 prefix = None
@@ -45,15 +45,15 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                 Archive(url=url, prefix=prefix, md5sum=md5sum))
 
         self.accept_keywords = [f for f in [x.strip() for x in \
-            self.options.get('accept-keywords', '').split('\n')] if f]
+            self.options.get('accept-keywords', '').splitlines()] if f]
         self.build_dependencies = [f for f in [x.strip() for x in \
-            self.options.get('build-dependencies', '').split('\n')] if f]
+            self.options.get('build-dependencies', '').splitlines()] if f]
         self.build_command = self.options.get('build-command', "/bin/freeze")
         self.build_container = "{}_build".format(self.name)
         self.build_layout = self.options.get('build-layout', None)
         self.build_image = self.options.get('build-image', None)
         self.build_env = dict([y for y in [x.strip().split(
-            '=') for x in self.options.get('build-env', '').split('\n')] if y[0]])
+            '=') for x in self.options.get('build-env', '').splitlines()] if y[0]])
         self.build_volumes_from = self.options.get('build-volumes-from', None)
         self.build_script_user = self.options.get('build-script-user', None)
         self.build_script_shell = self.options.get(
@@ -61,12 +61,12 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.build_script = "#!{}\n{}".format(
             self.build_script_shell,
             '\n'.join([f for f in [x.strip() for x in
-                                   self.options.get('build-script').replace('$$', '$').split('\n')]
+                                   self.options.get('build-script').replace('$$', '$').splitlines()]
                        if f])) if self.options.get('build-script', None) is not None else None
 
         self.assemble_container = "{}_assemble".format(self.name)
         self.copy = [merge([None, None], y.split()[:2]) for y in
-                     [f for f in [x.strip() for x in self.options.get('copy', '').split('\n')]
+                     [f for f in [x.strip() for x in self.options.get('copy', '').splitlines()]
                       if f]]
         self.base_image = self.options.get('base-image', None)
         self.keep = string_as_bool(self.options.get('keep', False))
@@ -74,7 +74,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.layout_uid = self.options.get('layout-uid', 0)
         self.layout_gid = self.options.get('layout-gid', 0)
         self.packages = [f for f in
-                         [x.strip() for x in self.options.get('packages', '').split('\n')]
+                         [x.strip() for x in self.options.get('packages', '').splitlines()]
                          if f]
         self.platform = self.options.get('platform', self.machine.platform)
         self.arch = self.options.get('arch', self.platform)
@@ -86,30 +86,31 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.assemble_script_shell = self.options.get('assemble-script-shell', self.shell)
         self.assemble_script = "#!{}\n{}".format(
             self.assemble_script_shell,
-            '\n'.join([_f for _f in [x.strip() for x in
-                                     self.options.get('assemble-script').replace('$$', '$').split('\n')]
+            '\n'.join([_f for _f in \
+                [x.strip() for x in \
+                 self.options.get('assemble-script').replace('$$', '$').splitlines()]
                        if _f])) \
             if self.options.get('assemble-script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
         self.masks = [_f for _f in [x.strip() for x in
-                                    self.options.get('mask', '').split('\n')]
+                                    self.options.get('mask', '').splitlines()]
                       if _f]
         self.unmasks = [_f for _f in [x.strip() for x in
-                                      self.options.get('unmask', '').split('\n')]
+                                      self.options.get('unmask', '').splitlines()]
                         if _f]
         self.uses = [_f for _f in [x.strip() for x in
-                                   self.options.get('use', '').split('\n')]
+                                   self.options.get('use', '').splitlines()]
                      if _f]
 
         self.command = self.options.get('command', "/bin/freeze")
         self.user = self.options.get('user', None)
         self.labels = dict([y for y in [x.strip().split('=')
-                                        for x in self.options.get('labels', '').split('\n')]
+                                        for x in self.options.get('labels', '').splitlines()]
                             if y[0]])
-        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').split('\n')]
+        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').splitlines()]
                        if _f]
         self.volumes = [y for y in [x.strip().split(
-            ':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
+            ':', 1) for x in self.options.get('volumes', '').splitlines()] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
 
     def add_package_modifier(self, name, modifiers):

@@ -31,7 +31,8 @@ class ArchiveExtractFilter(RecipeFilter): # pylint: disable=too-few-public-metho
             return None
         try:
             setuptools.archive_util.unpack_archive(path, extract_dir)
-        except Exception: # pylint: disable=broad-except
+        except Exception as exc: # pylint: disable=broad-except
+            self.logger.exception("Error downloading path: %s", path)
             return None
         else:
             return extract_dir

@@ -30,7 +30,7 @@ class DockerCopySubRecipe(BaseDockerSubRecipe):
         self.container_to = self.options['container-to']
         self.paths = [merge([None, None], y.split()[:2])
                       for y in [f for f in [x.strip() for x in
-                                            self.options.get('paths', '').split('\n')] if f]]
+                                            self.options.get('paths', '').splitlines()] if f]]
 
     def install(self):
         for src, dst in self.paths:

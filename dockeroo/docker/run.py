@@ -35,21 +35,21 @@ class DockerRunSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instan
         self.tty = string_as_bool(self.options.get('tty', False))
         self.keep = string_as_bool(self.options.get('keep', False))
         self.env = dict([y for y in [x.strip().split(
-            '=') for x in self.options.get('env', '').split('\n')] if y[0]])
+            '=') for x in self.options.get('env', '').splitlines()] if y[0]])
         self.ports = dict([y for y in [x.strip().split(
-            ':') for x in self.options.get('ports', '').split('\n')] if y[0]])
+            ':') for x in self.options.get('ports', '').splitlines()] if y[0]])
         self.links = dict([y for y in [x.strip().split(
-            ':') for x in self.options.get('links', '').split('\n')] if y[0]])
+            ':') for x in self.options.get('links', '').splitlines()] if y[0]])
         self.networks = [_f for _f in
-                         [x.strip() for x in self.options.get('networks', '').split('\n')]
+                         [x.strip() for x in self.options.get('networks', '').splitlines()]
                          if _f]
         self.network_aliases = [_f for _f in
                                 [x.strip() for x in
-                                 self.options.get('network-aliases', '').split('\n')]
+                                 self.options.get('network-aliases', '').splitlines()]
                                 if _f]
         self.volumes = [y for y in
                         [x.strip().split(':', 1) for x in
-                         self.options.get('volumes', '').split('\n')]
+                         self.options.get('volumes', '').splitlines()]
                         if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
         self.script_shell = self.options.get('script-shell', self.shell)

@@ -38,27 +38,28 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
         self.layout = self.options.get('layout', None)
         self.crossdev_platform = self.options.get(
             'crossdev-platform', self.machine.platform)
-        sefl.build_shell = self.options.get('build-shell', self.shell)
+        self.build_shell = self.options.get('build-shell', self.shell)
         self.build_script = "#!{}\n{}".format(
-            self.build_shell, '\n'.join([_f for _f in
-                                   [x.strip() for x in
-                                    self.options.get('build-script').replace('$$', '$').split('\n')]
-                                   if _f])) \
-                                   if self.options.get('build-script', None) is not None else None
+            self.build_shell,
+            '\n'.join([_f for _f in
+                       [x.strip() for x in
+                        self.options.get('build-script').replace('$$', '$').splitlines()]
+                       if _f])) \
+            if self.options.get('build-script', None) is not None else None
         self.tty = string_as_bool(self.options.get('tty', False))
         self.archives = []
         for url, prefix, md5sum in [merge([None, None, None], x.split())[:3] for x in
                                     [_f for _f in
                                      [x.strip() for x in
                                       self.options.get(
-                                          'archives', self.options.get('archive', '')).split('\n')]
+                                          'archives', self.options.get('archive', '')).splitlines()]
                                      if _f]]:
             if prefix == '/':
                 prefix = None
             self.archives.append(
                 Archive(url=url, prefix=prefix, md5sum=md5sum))
         self.volumes = [y for y in [x.strip().split(
-            ':', 1) for x in self.options.get('volumes', '').split('\n')] if y[0]]
+            ':', 1) for x in self.options.get('volumes', '').splitlines()] if y[0]]
         self.volumes_from = self.options.get('volumes-from', None)
 
     def install(self):

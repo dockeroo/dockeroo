@@ -909,7 +909,6 @@ class BaseDockerSubRecipe(BaseSubRecipe):
 
     def initialize(self):
         super(BaseDockerSubRecipe, self).initialize()
-        self.shell = self.options.get('shell', '/bin/sh')
         self.engine = DockerEngine(
             logger=self.logger,
             machine_name=self.options.get('machine-name', None),
@@ -919,11 +918,6 @@ class BaseDockerSubRecipe(BaseSubRecipe):
             shell=self.shell,
             timeout=int(self.options.get(
                 'timeout', DEFAULT_TIMEOUT)))
-
-    @property
-    @reify
-    def completed(self):
-        return os.path.join(self.location, '.completed')
 
     def is_image_updated(self, name):
         if not os.path.exists(self.completed):
@@ -946,9 +940,3 @@ class BaseDockerSubRecipe(BaseSubRecipe):
                 if os.lstat(os.path.join(dirname, filename)).st_mtime > completed_mtime:
                     return True
         return False
-
-    def mark_completed(self, files=None):
-        self.recipe.mkdir(self.location)
-        with open(self.completed, 'a'):
-            os.utime(self.completed, None)
-        return (files or []) + [self.completed]

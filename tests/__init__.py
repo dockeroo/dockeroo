@@ -139,7 +139,7 @@ MODULES = [
     'dockeroo.setup.download',
     'dockeroo.setup.cmmi',
     'dockeroo.setup.egg',
-    'dockeroo.setup.script',
+    'dockeroo.setup.shell_script',
 #    'dockeroo.utils',
 ]
 

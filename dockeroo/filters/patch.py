@@ -40,7 +40,8 @@ class PatchFilter(RecipeFilter): # pylint: disable=too-few-public-methods
         kwargs['stdin'] = open(path)
         try:
             self.recipe.call(*([binary] + options), **kwargs)
-        except CalledProcessError:
+        except CalledProcessError as exc:
+            self.logger.exception("Error applying patch: %s", path)
             return None
         else:
             return path
