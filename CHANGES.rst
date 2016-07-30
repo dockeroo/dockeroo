@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.19 (31-07-2016)
+-----------------
+
+Added dockeroo:setup.template recipe.
+Added support for render_template filterset.
+Added dockeroo:setup.shell-script and dockeroo:machine.create recipes.
+Removed "decorator" dependency, we're handling everything with functools.wraps.
+
+
 0.18 (28-07-2016)
 -----------------
 
