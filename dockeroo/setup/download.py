@@ -125,7 +125,6 @@ class SetupDownloadRecipe(BaseSourceRecipe):
         ... [buildout]
         ... parts = part
         ... find-links =
-        ...     https://pypi.python.org/simple/decorator/
         ...     https://pypi.python.org/simple/future/
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/
@@ -153,7 +152,6 @@ class SetupDownloadRecipe(BaseSourceRecipe):
         ... parts = part
         ... download-cache = ${buildout:directory}/downloads
         ... find-links =
-        ...     https://pypi.python.org/simple/decorator/
         ...     https://pypi.python.org/simple/future/
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/

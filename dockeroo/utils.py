@@ -18,13 +18,13 @@
 
 from collections import defaultdict
 from datetime import datetime, timedelta, tzinfo
+from functools import wraps
 import random
 import re
 import string
 
 from builtins import range # pylint: disable=redefined-builtin
 from builtins import object # pylint: disable=redefined-builtin
-from decorator import decorate
 from past.builtins import basestring # pylint: disable=redefined-builtin
 from zc.buildout import UserError
 
@@ -208,17 +208,19 @@ def parse_datetime(value):
         return datetime(**kwargs)
 
 def reify(func):
-    def _reify(func, self, *args, **kwargs):
+    @wraps(func)
+    def _reify(self, *args, **kwargs):
         cache = '_cache_{}'.format(func.__name__)
         if not hasattr(self, cache):
             setattr(self, cache, func(self, *args, **kwargs))
         return getattr(self, cache)
-    return decorate(func, _reify)
+    return _reify
 
 def listify(func):
-    def _listify(func, *args, **kwargs):
+    @wraps(func)
+    def _listify(*args, **kwargs):
         return list(func(*args, **kwargs))
-    return decorate(func, _listify)
+    return _listify
 
 def string_as_bool(obj):
     if not isinstance(obj, basestring):

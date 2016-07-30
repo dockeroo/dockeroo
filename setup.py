@@ -27,7 +27,6 @@ CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 VERSION = '0.18'
 
 requires = [
-    'decorator',
     'future',
     'setuptools>8',
     'shellescape',

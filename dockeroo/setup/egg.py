@@ -381,7 +381,6 @@ class SetupEggRecipe(SetupDownloadRecipe):
         ... index = %(server)sdata/index.html
         ... find-links =
         ...     %(server)sdata/dummy/index.html
-        ...     https://pypi.python.org/simple/decorator/
         ...     https://pypi.python.org/simple/future/
         ...     https://pypi.python.org/simple/setuptools/
         ...     https://pypi.python.org/simple/shellescape/
