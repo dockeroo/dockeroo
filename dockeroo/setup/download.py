@@ -109,6 +109,7 @@ class SetupDownloadSubRecipe(BaseDownloadSubRecipe):
             'develop', False) is True else 'location'
         self.acquire_source(source, destkey=destkey)
         self.patch_source(source)
+        self.render_template_source(source)
 
     def process_source(self, source):
         pass

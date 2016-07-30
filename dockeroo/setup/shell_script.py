@@ -62,6 +62,9 @@ class SetupShellScriptSubRecipe(BaseDownloadSubRecipe):
             raise ExternalProcessError(
                 "Error running script \"{}\"".format(self.name), proc)
 
+    def process_source(self, source):
+        pass
+
     def install(self):
         super(SetupShellScriptSubRecipe, self).install()
         self.run_script(self.install_script)

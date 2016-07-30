@@ -140,6 +140,7 @@ MODULES = [
     'dockeroo.setup.cmmi',
     'dockeroo.setup.egg',
     'dockeroo.setup.shell_script',
+    'dockeroo.setup.template',
 #    'dockeroo.utils',
 ]
 

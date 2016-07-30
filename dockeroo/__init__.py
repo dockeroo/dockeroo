@@ -447,17 +447,14 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             elif os.path.exists(path):
                 os.remove(path)
 
-    def patch(self, patch_spec, prefix=None, command_options=None, command_binary=None, cwd=None):
+    def patch(self, patches, prefix=None, command_options=None, command_binary=None, cwd=None):
         params = {
             'command-options': shlex.split(command_options) if command_options is not None else [],
             'command-binary': command_binary.strip() if command_binary is not None else 'patch',
         }
         if cwd is not None:
             params['cwd'] = cwd.strip()
-        for patch in patch_spec.splitlines():
-            patch = patch.strip()
-            if not patch:
-                continue
+        for patch in patches:
             if '#' in patch:
                 patch, params_string = patch.split('#', 1)
                 params.update(parse_qs(params_string))
@@ -465,6 +462,14 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
                 patch = os.path.join(prefix, patch)
             self.logger.info('Applying patch: "%s"', patch)
             self.filterset('patch', [patch], {'params': params})
+
+    def render_template(self, source, destination, **context):
+        params = {
+            'source': source,
+            'context': context,
+        }
+        self.logger.info('Rendering template "%s" to "%s"', source, destination)
+        self.filterset('render_template', [destination], {'params': params})
 
     def call(self, *args, **kwargs):
         kwargs.update(close_fds=True, stdout=subprocess.PIPE,

@@ -96,6 +96,7 @@ class BaseSourceSubRecipe(BaseSubRecipe):
             'patches',
             'patch-options',
             'patch-binary',
+            'template-sources',
         ]
 
     def prepare_source(self, source):
@@ -103,6 +104,7 @@ class BaseSourceSubRecipe(BaseSubRecipe):
         self.acquire_source(source, destkey='download-path'
                             if source.get('develop', False) is True else 'working-directory')
         self.patch_source(source)
+        self.render_template_source(source)
 
     def populate_source(self, source, load_options=True):
         if load_options:
@@ -123,12 +125,34 @@ class BaseSourceSubRecipe(BaseSubRecipe):
     def patch_source(self, source, cwdkey='source-directory', stage=None):
         option = self.resolve_stage('patches', stage=stage)
         if option in source:
-            self.recipe.patch(source.get(option),
+            patches = [x.strip() for x in source.get(option).splitlines() if x]
+            self.recipe.patch(patches,
                               command_options=source.get(self.resolve_stage(
                                   'patch-options', stage=stage), None),
                               command_binary=source.get(self.resolve_stage(
                                   'patch-binary', stage=stage), None),
                               cwd=source[cwdkey])
+
+    def render_template_source(self, source, cwdkey='source-directory', stage=None):
+        template_sources_option = self.resolve_stage('template-sources', stage=stage)
+        template_destinations_option = self.resolve_stage('template-destinations', stage=stage)
+        if template_sources_option in source:
+            template_sources = [x.strip() for x in source.get(
+                                template_sources_option).splitlines() if x]
+            template_destinations = [x.strip() for x in source.get(
+                                     template_destinations_option).splitlines() if x]
+            template_context = [x.strip().split('=') for x in source.get(
+                                self.resolve_stage('template-context', stage=stage)).splitlines()
+                                if x]
+            template_destination = source.get(template_destination_option, source[cwdkey])
+            for tempate_source, template_destination in zip(template_sources, template_destinations):
+                if not os.path.isabs(template_source):
+                    template_source = os.path.join(source[cwdkey], template_source)
+                if not os.path.isabs(template_destination):
+                    template_destination = os.path.join(source[cwdkey], template_destination)
+                self.recipe.render_template(template_source,
+                                            template_destination,
+                                            **template_context)
 
     def process_source(self, source):
         raise NotImplementedError
