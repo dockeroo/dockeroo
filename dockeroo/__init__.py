@@ -268,7 +268,6 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
     def initialize(self):
         self.set_logging(self.default_log_format,
                          self.default_log_level)
-        self.shell = self.options.get('shell', '/bin/sh')
 
         self.initialize_target('install', mandatory=True)
 
@@ -515,6 +514,7 @@ class BaseSubRecipe(object):
         self.group = group
         self.logger = recipe.logger
         self.options = recipe.options[group]
+        self.shell = self.options.get('shell', '/bin/sh')
 
     @property
     def name(self):

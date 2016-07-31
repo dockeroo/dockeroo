@@ -81,7 +81,7 @@ class DockerMachine(object):
         args = ['ls', '--format',
                 SEPARATOR.join(['{{{{.{}}}}}'.format(x) for x in params])]
         for key, value in filters.items():
-            args += ['-f', '{}={}'.format(key, value)]
+            args += ['--filter', '{}={}'.format(key, value)]
         proc = DockerMachineProcess(args, stdout=PIPE)
         if proc.wait() != 0:
             raise ExternalProcessError(
@@ -92,11 +92,32 @@ class DockerMachine(object):
         for line in proc.stdout.read().splitlines():
             record = {}
             values = line.split(SEPARATOR)
+            if len(values) < 2:
+                continue
             for num, param in enumerate(params):
                 record[params_map[param]] = values[num] \
                     if values[num] and values[num] != '<none>' else None
             ret.append(record)
         return ret
+
+    @classmethod
+    def create(cls, name, engine_driver, engine_options):
+        args = ['create', '-d', engine_driver]
+        for k, v in engine_options:
+            args += ["--{}".format(k), v]
+        args.append(name)
+        proc = DockerMachineProcess(args)
+        if proc.wait() != 0:
+            raise ExternalProcessError(
+                "Error running \"docker-machine {}\"".format(' '.join(args)), proc)
+
+    @classmethod
+    def remove(cls, name):
+        args = ['rm', '-y', name]
+        proc = DockerMachineProcess(args)
+        if proc.wait() != 0:
+            raise ExternalProcessError(
+                "Error running \"docker-machine {}\"".format(' '.join(args)), proc)
 
     def run_cmd(self, cmd, quiet=False, return_output=False):
         if not quiet:

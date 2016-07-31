@@ -42,7 +42,7 @@ class SetupShellScriptSubRecipe(BaseDownloadSubRecipe):
         else:
             self.update_script = None
 
-        self.script_shell = self.options.get('script-shell', self.recipe.shell)
+        self.script_shell = self.options.get('script-shell', self.shell)
         self.script_env = dict([y for y in [x.strip().split(
             '=') for x in self.options.get('script-env', '').splitlines()] if y[0]])
         self.script = "#!{}\n{}".format(

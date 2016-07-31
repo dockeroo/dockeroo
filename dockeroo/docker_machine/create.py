@@ -19,25 +19,69 @@
 from zc.buildout import UserError
 
 from dockeroo import BaseGroupRecipe
-from dockeroo.docker_machine import BaseDockerMachineSubRecipe
+from dockeroo.docker_machine import DockerMachine, BaseDockerMachineSubRecipe
 from dockeroo.utils import string_as_bool
 
 
 class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disable=too-many-instance-attributes
+    """
+    A recipe to create a new docker machine.
+
+    Example:
+
+        >>> with buildout_test(
+        ... '''
+        ... [buildout]
+        ... parts = part
+        ... find-links =
+        ...     https://pypi.python.org/simple/future/
+        ...     https://pypi.python.org/simple/setuptools/
+        ...     https://pypi.python.org/simple/shellescape/
+        ...     https://pypi.python.org/simple/tzlocal/
+        ...
+        ... [part]
+        ... recipe = dockeroo:machine.create
+        ... name = test-part
+        ... engine-driver = virtualbox
+        ... ''' % dict(server=server_url)) as b:
+        ...    print_(b.run(), end='')
+        ...    print_(b.run(), end='')
+        Installing part.
+        Running pre-create checks...
+        Creating machine...
+        (test-part) Copying <PATH> to <PATH>
+        (test-part) Creating VirtualBox VM...
+        (test-part) Creating SSH key...
+        (test-part) Starting the VM...
+        (test-part) Check network to re-create if needed...
+        (test-part) Waiting for an IP...
+        Waiting for machine to be running, this may take a few minutes...
+        Detecting operating system of created instance...
+        Waiting for SSH to be available...
+        Detecting the provisioner...
+        Provisioning with boot2docker...
+        Copying certs to the local machine directory...
+        Copying certs to the remote machine...
+        Setting Docker configuration on the remote daemon...
+        Checking connection to Docker...
+        Docker is up and running!
+        To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: docker-machine env test-part
+        Updating part.
+    """
 
     def initialize(self):
         super(DockerMachineCreateSubRecipe, self).initialize()
 
         self.engine_driver = self.options['engine-driver']
-        self.command = ['create', '-d', self.engine_driver]
+        self.engine_options = []
         for key in [
                 'engine-install-url',
                 'engine-storage-driver',
             ]:
             if key in self.options:
-                self.command += ["--{}".format(key), self.options.get(key)]
+                self.engine_options.append((key, self.options.get(key)))
 
-        for (cmd, key) in [
+        for (opt, key) in [
                 ('engine-opt', 'engine-options'),
                 ('engine-env', 'engine-env'),
                 ('engine-label', 'engine-labels'),
@@ -48,7 +92,7 @@ class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disabl
                         self.options.get(key, '').splitlines()]:
                 if not elm:
                     continue
-                self.command += ["--{}".format(cmd), elm]
+                self.engine_options.append((opt, elm))
 
         try:
             {
@@ -75,14 +119,14 @@ class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disabl
                 'virtualbox-hostonly-nicpromisc',
             ]:
             if key in self.options:
-                self.command += ["--{}".format(key), self.options.get(key)]
+                self.engine_options.append((key, self.options.get(key)))
         for key in [
                 'virtualbox-no-share',
                 'virtualbox-no-dns-proxy',
                 'virtualbox-no-vtx-check',
             ]:
             if key in self.options:
-                self.command += ["--{}".format(key), string_as_bool(self.options.get(key))]
+                self.engine_options.append((key, str(string_as_bool(self.options.get(key))).lower()))
 
     def initialize_vmwarevsphere(self):
         for key in [
@@ -90,7 +134,7 @@ class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disabl
                 'vmwarevsphere-username',
                 'vmwarevsphere-password',
             ]:
-            self.command += ["--{}".format(key), self.options.get(key)]
+            self.engine_options.append((key, self.options.get(key)))
         for key in [
                 'vmwarevsphere-boot2docker-url',
                 'vmwarevsphere-vcenter-port',
@@ -104,17 +148,19 @@ class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disabl
                 'vmwarevsphere-hostsystem',
             ]:
             if key in self.options:
-                self.command += ["--{}".format(key), self.options.get(key)]
+                self.engine_options.append((key, self.options.get(key)))
 
     def install(self):
+        if not DockerMachine.machines(name=self.name):
+            DockerMachine.create(self.name, self.engine_driver, self.engine_options)
         return self.mark_completed()
 
     def update(self):
-        return self.mark_completed()
+        return self.install()
 
     def uninstall(self):
-        if not self.keep:
-            self.remove_container(self.name)
+        if not self.keep and DockerMachine.machines(name=self.name):
+            DockerMachine.remove(self.name)
 
 
 class DockerMachineCreateRecipe(BaseGroupRecipe):
