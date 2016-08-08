@@ -50,3 +50,7 @@ dockeroo is beta software.
 
 Documentation
 =============
+
+Documentation is available at the following address:
+
+https://pythonhosted.org/dockeroo/

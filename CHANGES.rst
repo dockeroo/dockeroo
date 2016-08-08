@@ -1,124 +1,128 @@
 Changelog
 =========
 
+0.20 (08-08-2016)
+-----------------
+
+- Introduced sphinx documentation and moved recipes documentation to respective
+  classes docstrings.
+- Fixed dockeroo:machine.create recipe.
+
+
 0.19 (31-07-2016)
 -----------------
 
-Added dockeroo:setup.template recipe.
-Added support for render_template filterset.
-Added dockeroo:setup.shell-script and dockeroo:machine.create recipes.
-Removed "decorator" dependency, we're handling everything with functools.wraps.
+- Added dockeroo:setup.template recipe.
+- Added support for render_template filterset.
+- Added dockeroo:setup.shell-script and dockeroo:machine.create recipes.
+- Removed "decorator" dependency, we're handling everything with functools.wraps.
 
 
 0.18 (28-07-2016)
 -----------------
 
-Minor documentation fixes.
+- Minor documentation fixes.
 
 
 0.17 (24-07-2016)
 -----------------
 
-Added dockeroo.setup recipes.
-Refactored testing.
-Renamed all recipes.
-Major round of refactoring/convention check.
+- Added dockeroo.setup recipes.
+- Refactored testing.
+- Renamed all recipes.
+- Major round of refactoring/convention check.
 
 
 0.16 (24-07-2016)
 -----------------
 
-Split DockerMachine and DockerEngine.
-Fixed CHANGELOG.rst formatting.
-Fixed get_random_name().
+- Split DockerMachine and DockerEngine.
+- Fixed CHANGELOG.rst formatting.
+- Fixed get_random_name().
 
 
 0.15 (24-07-2016)
 -----------------
 
-Minor fixes.
+- Minor fixes.
 
 
 0.14 (24-07-2016)
 -----------------
 
-Minor fixes.
+- Minor fixes.
 
 
 0.13 (24-07-2016)
 -----------------
 
-Added keep option to **docker:pull**.
-update() methods now check wether target has to be rebuilt.
+- Added keep option to **docker:pull**.
+- update() methods now check wether target has to be rebuilt.
 
 
 0.12 (23-07-2016)
 -----------------
 
-Minor fix to **docker:run**.
+- Minor fix to **docker:run**.
 
 
 0.11 (23-07-2016)
 -----------------
 
-Renamed primary option to "name" for all recipes.
-Renamed "machine" option to "machine-name".
+- Renamed primary option to "name" for all recipes.
+- Renamed "machine" option to "machine-name".
 
 
 0.10 (23-07-2016)
 -----------------
 
-Minor fix to **docker:run**.
+- Minor fix to **docker:run**.
 
 
 0.9 (23-07-2016)
 ----------------
 
-Updated **machine_name** selection: if **machine** option is not set
-DOCKER_MACHINE_NAME environment variable is used, or "default" if unset.
-
-Added support for option **start** in **docker:run**.
+- Updated **machine_name** selection: if **machine** option is not set
+  DOCKER_MACHINE_NAME environment variable is used, or "default" if unset.
+- Added support for option **start** in **docker:run**.
 
 
 0.8 (23-07-2016)
 ----------------
 
-Added support for Python 3.
-
-Added initial support for unit tests.
+- Added support for Python 3.
+- Added initial support for unit tests.
 
 
 0.7 (22-07-2016)
 ----------------
 
-Fixed **dockeroo:run** ip address fetch.
+- Fixed **dockeroo:run** ip address fetch.
 
 
 0.6 (22-07-2016)
 ----------------
 
-Updated documentation.
-
-Added support for networks, network-aliases and links
-on **dockeroo:run**.
-
-Added new recipe **dockeroo:network**.
+- Updated documentation.
+- Added support for networks, network-aliases and links
+  on **dockeroo:run**.
+- Added new recipe **dockeroo:network**.
 
 
 0.5 (22-07-2016)
 ----------------
 
-Added support for environment variables and ports
-on **dockeroo:run**.
+- Added support for environment variables and ports
+  on **dockeroo:run**.
 
 
 0.3 (22-07-2016)
 ----------------
 
-Fixed MANIFEST.in.
+- Fixed MANIFEST.in.
 
 
 0.1 (22-07-2016)
 ----------------
 
-Initial release.
+- Initial release.
