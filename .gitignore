@@ -1,7 +1,8 @@
 .DS_Store
-.coverage
-.eggs
+/.coverage
+/.eggs
 *.py[co]
 *.egg-info/
 *.egg
-dist
+/dist
+/doc/_build

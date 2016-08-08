@@ -57,6 +57,7 @@ class SetupTemplateRecipe(BaseGroupRecipe):
     A recipe to run an installation script.
 
     Example:
+
         >>> import os
         >>> with buildout_test('''
         ... [buildout]

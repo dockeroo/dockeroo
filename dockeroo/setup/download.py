@@ -147,6 +147,7 @@ class SetupDownloadRecipe(BaseSourceRecipe):
         dockeroo: patching file Makefile.dist
 
     git clone and update:
+
         >>> with buildout_test(
         ... '''
         ... [buildout]

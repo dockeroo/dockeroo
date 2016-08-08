@@ -376,6 +376,7 @@ class SetupEggRecipe(SetupDownloadRecipe):
     A recipe to build an egg package.
 
     Example:
+
         >>> with buildout_test('''
         ... [buildout]
         ... index = %(server)sdata/index.html

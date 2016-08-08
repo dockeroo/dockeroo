@@ -16,17 +16,15 @@
 # limitations under the License.
 
 
-import os
-from subprocess import Popen, PIPE
-
 from zc.buildout import UserError
 
 from dockeroo.setup.download import BaseDownloadSubRecipe, SetupDownloadRecipe
 
 
-class SetupShellScriptSubRecipe(BaseDownloadSubRecipe):
+class SetupPythonScriptSubRecipe(BaseDownloadSubRecipe):
+
     def initialize(self):
-        super(SetupShellScriptSubRecipe, self).initialize()
+        super(SetupPythonScriptSubRecipe, self).initialize()
         if 'install-script' in self.options:
             self.install_script = self.options.get('install-script')
         elif 'script' in self.options:
@@ -39,42 +37,12 @@ class SetupShellScriptSubRecipe(BaseDownloadSubRecipe):
             self.update_script = self.options.get('update-script')
         elif 'script' in self.options:
             self.update_script = self.options.get('script')
-        else:
-            self.update_script = None
-
-        self.script_shell = self.options.get('script-shell', self.shell)
-        self.script_env = dict([y for y in [x.strip().split(
-            '=') for x in self.options.get('script-env', '').splitlines()] if y[0]])
-        self.script = "#!{}\n{}".format(
-            self.script_shell,
-            '\n'.join([_f for _f in \
-                [x.strip() for x in \
-                 self.options.get('script').replace('$$', '$').splitlines()]
-                       if _f])) \
-            if self.options.get('script', None) is not None else None
-
-
-    def run_script(self, script):
-        proc = Popen(self.script_shell, stdin=PIPE, stderr=PIPE, close_fds=True)
-        proc.stdin.write(script)
-        proc.stdin.close()
-        if proc.wait() != 0:
-            raise ExternalProcessError(
-                "Error running script \"{}\"".format(self.name), proc)
 
     def process_source(self, source):
         pass
 
-    def install(self):
-        super(SetupShellScriptSubRecipe, self).install()
-        self.run_script(self.install_script)
 
-    def upgrade(self):
-        super(SetupShellScriptSubRecipe, self).upgrade()
-        self.run_script(self.update_script)
-
-
-class SetupShellScriptRecipe(SetupDownloadRecipe):
+class SetupPythonScriptRecipe(SetupDownloadRecipe):
     """
     A recipe to run an installation script.
 
@@ -86,12 +54,11 @@ class SetupShellScriptRecipe(SetupDownloadRecipe):
         ... parts = part
         ...
         ... [part]
-        ... recipe = dockeroo:setup.shell-script
-        ... script = echo "HELLO."
+        ... recipe = dockeroo:setup.python-script
+        ... script =
         ... ''') as b:
         ...     print_(b.run(), end='')
         Installing part.
-        HELLO.
     """
 
-    subrecipe_class = SetupShellScriptSubRecipe
+    subrecipe_class = SetupPythonScriptSubRecipe

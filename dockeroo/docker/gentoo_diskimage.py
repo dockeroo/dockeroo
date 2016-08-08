@@ -92,5 +92,5 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
         self.remove_container(self.build_container)
 
 
-class GentooDiskImageRecipe(BaseGroupRecipe):
+class DockerGentooDiskImageRecipe(BaseGroupRecipe):
     subrecipe_class = GentooDiskImageSubRecipe
