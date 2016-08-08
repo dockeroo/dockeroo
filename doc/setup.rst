@@ -6,7 +6,7 @@ dockeroo:setup.cmmi
 
 .. autoclass:: dockeroo.setup.cmmi::SetupCmmiRecipe
 
-dockero:setup.download
+dockeroo:setup.download
 ----------------------
 
 .. autoclass:: dockeroo.setup.download::SetupDownloadRecipe
