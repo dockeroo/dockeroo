@@ -32,7 +32,7 @@ Copyright © 2016, Giacomo Cariello <info@dockeroo.com>
 
 dockeroo is released under Apache 2.0 License. See `LICENSE.rst`_ for complete license.
 
-.. _LICENSE.rst: LICENSE.rst
+.. _LICENSE.rst: https://github.com/dockeroo/dockeroo/blob/master/LICENSE.rst
 
 
 Requirements
