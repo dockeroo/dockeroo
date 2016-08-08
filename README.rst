@@ -9,11 +9,20 @@ dockeroo can build docker images from a classic Dockerfile or use a Gentoo_ cont
 .. _buildout: http://www.buildout.org/
 .. _Gentoo: http://www.gentoo.org/
 
+
 Useful links
 ============
 
 * PyPI page: https://pypi.python.org/pypi/dockeroo/
 * Code repository: https://github.com/dockeroo/dockeroo
+
+
+Documentation
+=============
+
+Documentation is available at the following address:
+
+https://pythonhosted.org/dockeroo/
 
 
 Bug reports and Feedback
@@ -33,24 +42,9 @@ dockeroo is released under Apache 2.0 License. See `LICENSE.rst`_ for complete l
 
 .. _LICENSE.rst: LICENSE.rst
 
-Requirements
-============
-
-dockeroo requires a working buildout environment and the following system packages:
-
-* docker >= 1.11
-* docker-machine >= 0.7.0
-
 
 Status
 ======
 
 dockeroo is beta software.
 
-
-Documentation
-=============
-
-Documentation is available at the following address:
-
-https://pythonhosted.org/dockeroo/
