@@ -99,4 +99,78 @@ class DockerRunSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-instan
 
 
 class DockerRunRecipe(BaseGroupRecipe):
+    """
+    This recipe executes the following tasks:
+
+    1. Create **container** from **image** if it doesn't exist.
+    2. If a **layout** is set in recipe, load it in container.
+    3. Run **container**.
+    4. If **script** is set, execute it on the container with **docker exec**.
+
+    .. describe:: Usage
+
+       The following example buildout part creates and runs a **nginx** container
+       from a **nginx:latest** image.
+
+    .. code-block:: ini
+
+       [nginx]
+       recipe = dockeroo:docker.run
+       container = nginx
+       image = nginx:latest
+
+    .. describe:: Configuration options
+
+       command
+           Command to run on container. Defaults to unset.
+
+       image
+           Image to run.
+
+       layout
+           Copies a local folder to container's root with **docker cp**.
+
+       links
+           Links the container to the declared container. One per line, format is <container>:<alias>.
+
+       machine-name
+          Docker machine where **container** will be created.
+          Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
+       name
+           Container name. Defaults to part name.
+
+       networks
+           Enables the selected network for the container. One per line.
+
+       network-aliases
+           Adds the defined network aliases for the container. One per line.
+
+       script
+           Executes a shell script on container upon execution.
+
+       script-shell
+           Shell for **script** execution. Defaults to "/bin/sh".
+
+       script-user
+           User for **script** execution. Defaults to docker default.
+
+       start
+           Start container after creation. Defaults to true.
+
+       timeout
+          **docker** command timeout.
+
+       tty
+           Assign a **Pseudo-TTY** to the container.
+
+       user
+           User for docker container command execution.
+
+       volumes
+           Volumes to bind mount, one per line. Format is <path>:<mountpoint>.
+
+       volumes-from
+           Mount volumes from specified container.
+    """
     subrecipe_class = DockerRunSubRecipe

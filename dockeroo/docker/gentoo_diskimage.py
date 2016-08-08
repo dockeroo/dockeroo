@@ -93,4 +93,93 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
 
 
 class DockerGentooDiskImageRecipe(BaseGroupRecipe):
+    """
+    This recipe executes the following tasks:
+
+    1. Creates a temporary container from **builder-image** docker image.
+    2. Executes **prepare-script** on the builder container.
+    3. Extracts **base-image** docker image into **build-root** folder.
+    4. Executes **build-script** on the builder container.
+    5. Extracts **image-file** from the builder container and saves it into **${:location}**.
+
+    .. describe:: Usage
+
+       The following example buildout part shows how to build a linux disk image
+       from a **base** image using a **builder** image produced with :py:class:`dockeroo.docker.gentoo_bootstrap.DockerGentooBootstrapRecipe`.
+
+    .. code-block:: ini
+
+        [disk-image]
+        recipe = dockeroo:docker.gentoo-diskimage
+        build-image = builder:latest
+        base-image = base:latest
+        build-root = /mnt/
+        image-file = /tmp/disk.img
+        prepare-script =
+            mkdir -p /tmp && dd if=/dev/zero of=${:image-file} bs=1M count=2048
+            parted -a optimal ${:image-file} mklabel msdos
+            parted -a optimal ${:image-file} unit mib mkpart primary fat32 1 131
+            parted -a optimal ${:image-file} set 1 boot on
+            parted -a optimal ${:image-file} unit mib mkpart primary linux-swap 131 643
+            parted -a optimal ${:image-file} unit mib mkpart primary ext2 643 100%
+            rm -f /dev/loop0; mknod /dev/loop0 b 7 0
+            rm -f /dev/loop0p1
+            rm -f /dev/loop0p2
+            rm -f /dev/loop0p3
+            losetup --show -P /dev/loop0 ${:image-file}
+            mknod /dev/loop0p1 b 259 0
+            mknod /dev/loop0p2 b 259 1
+            mknod /dev/loop0p3 b 259 2
+            mkfs.vfat -F 32 -n BOOT /dev/loop0p1
+            mkswap /dev/loop0p2
+            mkfs.ext4 -T small /dev/loop0p3
+            mount -t ext4 /dev/loop0p3 /mnt
+            mkdir -p /mnt/boot
+            mount -t vfat /dev/loop0p1 /mnt/boot
+        build-script =
+            umount /dev/loop0p1
+            umount /dev/loop0p3
+            losetup -d /dev/loop0 >/dev/null 2>&1
+
+    .. describe:: Configuration options
+
+       This recipe accepts the following options:
+
+       base-image
+          Docker image to use as base for disk creation.
+
+       build-command
+          Command to launch on builder container upon creation. Defaults to "/bin/freeze".
+
+       build-image
+          Docker image to use as builder.
+
+       build-root
+          Root folder where **base-image** is extracted.
+
+       build-script
+          This shell script is executed after **base-image** extraction.
+
+       build-script-shell
+          Shell to use for script execution. Defaults to "/bin/sh".
+
+       build-script-user
+          User which executes the **prepare-script** and **build-script**. If unset, docker default is applied.
+
+       build-volumes-from
+          Volumes to be mounted on build container upon creation.
+
+       image-file
+          Disk image file which is extracted from build container.
+
+       machine-name
+          Docker machine where **build-image** and **base-image** reside.
+          Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
+       prepare-script
+          This shell script is executed before **base-image** extraction.
+
+       timeout
+          **docker** command timeout.
+    """
     subrecipe_class = GentooDiskImageSubRecipe

@@ -41,4 +41,32 @@ class DockerVolumeSubRecipe(BaseDockerSubRecipe):
 
 
 class DockerVolumeRecipe(BaseGroupRecipe):
+    """
+    This recipe creates a new volume if it doesn't exist.
+    
+    .. describe:: Usage
+    
+       The following example buildout part creates a volume named "distfiles_volume".
+    
+    .. code-block:: ini
+    
+       [distfiles_volume]
+       recipe = dockeroo:docker.volume
+       keep = true
+    
+    .. describe:: Configuration options
+    
+       machine-name
+           Docker machine where **volume** will be created.
+           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+       
+       name
+           Volume name. Defaults to part name.
+       
+       keep
+           Don't delete volume upon uninstall.                                                                                                                                                          
+                                                                                                                                                                                                        
+       timeout
+          **docker** command timeout.
+    """
     subrecipe_class = DockerVolumeSubRecipe

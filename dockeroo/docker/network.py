@@ -56,4 +56,51 @@ class DockerNetworkSubRecipe(BaseDockerSubRecipe):
 
 
 class DockerNetworkRecipe(BaseGroupRecipe):
+    """
+    This recipe creates a new network if it doesn't exist.
+    
+    .. describe:: Usage
+    
+       The following example buildout part creates a network named "internal_network".
+    
+    .. code-block:: ini
+    
+       [internal_network]
+       recipe = dockeroo:docker.network
+       subnet = 10.0.0.0/8
+       gateway = 10.0.0.1
+       ip-range = 10.0.1.0/24
+       ipv6 = true
+       keep = true
+    
+    .. describe:: Configuration options
+    
+       machine-name
+          Docker machine where **network** will be created.
+          Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+       
+       gateway
+           IP address of the network gateway. Auto if unset.
+       
+       subnet
+           CIDR subnet of the network. Auto if unset.
+       
+       name
+           Network name. Defaults to part name.
+       
+       internal
+           Disables access to external network.
+       
+       ip-range
+           Allocates IPs from a range.
+       
+       ipv6
+           Enables IPv6 networking. Defaults to false.
+       
+       keep
+           Don't delete network upon uninstall.
+       
+       timeout
+          **docker** command timeout.
+    """
     subrecipe_class = DockerNetworkSubRecipe

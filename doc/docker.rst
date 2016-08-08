@@ -4,49 +4,69 @@ Docker recipes
 dockeroo:docker.build
 ---------------------
 
-.. autoclass:: dockeroo.docker.build::DockerBuildRecipe
+.. module:: dockeroo.docker.build
+
+.. autoclass:: DockerBuildRecipe
 
 dockeroo:docker.copy
 --------------------
 
-.. autoclass:: dockeroo.docker.copy::DockerCopyRecipe
+.. module:: dockeroo.docker.copy
+
+.. autoclass:: DockerCopyRecipe
 
 dockeroo:docker.gentoo-bootstrap
 --------------------------------
 
-.. autoclass:: dockeroo.docker.gentoo_bootstrap::DockerGentooBootstrapRecipe
+.. module:: dockeroo.docker.gentoo_bootstrap
+
+.. autoclass:: DockerGentooBootstrapRecipe
 
 dockeroo:docker.gentoo-build
 ----------------------------
 
-.. autoclass:: dockeroo.docker.gentoo_build::DockerGentooBuildRecipe
+.. module:: dockeroo.docker.gentoo_build
+
+.. autoclass:: DockerGentooBuildRecipe
 
 dockeroo:docker.gentoo-diskimage
 --------------------------------
 
-.. autoclass:: dockeroo.docker.gentoo_diskimage::DockerGentooDiskImageRecipe
+.. module:: dockeroo.docker.gentoo_diskimage
+
+.. autoclass:: DockerGentooDiskImageRecipe
 
 dockeroo:docker.network
 -----------------------
 
-.. autoclass:: dockeroo.docker.network::DockerNetworkRecipe
+.. module:: dockeroo.docker.network
+
+.. autoclass:: DockerNetworkRecipe
 
 dockeroo:docker.pull
 --------------------
 
-.. autoclass:: dockeroo.docker.pull::DockerPullRecipe
+.. module:: dockeroo.docker.pull
+
+.. autoclass:: DockerPullRecipe
 
 dockeroo:docker.push
 --------------------
 
-.. autoclass:: dockeroo.docker.push::DockerPushRecipe
+.. module:: dockeroo.docker.push
+
+.. autoclass:: DockerPushRecipe
 
 dockeroo:docker.run
 -------------------
 
-.. autoclass:: dockeroo.docker.run::DockerRunRecipe
+.. module:: dockeroo.docker.run
+
+.. autoclass:: DockerRunRecipe
 
 dockeroo:docker.volume
 ----------------------
 
-.. autoclass:: dockeroo.docker.volume::DockerVolumeRecipe
+.. module:: dockeroo.docker.volume
+
+.. autoclass:: DockerVolumeRecipe

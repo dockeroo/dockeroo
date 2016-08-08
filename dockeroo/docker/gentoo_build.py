@@ -221,4 +221,179 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
 
 
 class DockerGentooBuildRecipe(BaseGroupRecipe):
+    """
+    This recipe builds a docker image by assembling an optional base image,
+    a layout and a list of Gentoo binary packages.
+
+    .. describe:: Usage
+
+       The following example buildout part shows how to build a base image
+       using a **builder** image produced with :py:class:`dockeroo.docker.gentoo_bootstrap.DockerGentooBootstrapRecipe`.
+
+    .. code-block:: ini
+
+       recipe = dockeroo:docker.gentoo-build
+       layout = ${buildout:directory}/base
+       use =
+           sys-apps/busybox static
+       accept-keywords =
+           app-admin/monit **
+           sys-apps/s6 **
+           sys-apps/s6-rc **
+           dev-lang/execline **
+           dev-libs/skalibs **
+       packages =
+           sys-libs/ncurses:0/5
+           sys-libs/ncurses:5/5
+           sys-libs/readline
+           sys-apps/busybox
+           app-shells/bash
+           sys-libs/glibc
+           sys-apps/gentoo-functions
+           dev-lang/execline
+           dev-libs/skalibs
+           sys-apps/s6
+           sys-apps/s6-rc
+           app-admin/monit
+       shell = /bin/bash
+       script =
+           /bin/busybox --help | \\
+           /bin/busybox sed -e '1,/^Currently defined functions:/d' \\
+             -e 's/[ \\t]//g' -e 's/,$$//' -e 's/,/\\n/g' | \\
+             while read a ; do
+               if [ "$$a" != "" ]; then
+                 /bin/busybox ln -sf "busybox" "/bin/$$a"
+               fi
+             done
+           /sbin/ldconfig -v
+           /usr/sbin/locale-gen
+           /bin/s6-rc-compile /etc/s6-rc/compiled /etc/s6-rc/services
+           chown 65534:65534 /var/log/s6-svscan
+           rm -rf /usr/include /usr/share/doc /usr/share/info /usr/share/man
+       tty = true
+
+    .. describe:: Configuration options
+
+       abi
+           Target Application Binary Interface. Defaults to "gnu".
+
+       accept-keywords
+           Sets /etc/portage/package.accept-keywords on builder container's chrooted environment, one per line.
+
+       arch
+           Target architecture. Defaults to machine architecture.
+
+       archives
+           List of URLs of operating system initial filesystem contents for **assemble-image**.
+
+       assemble-container
+           Name of assemble container. Defaults to <partname>_assemble.
+
+       base-image
+           Name of image to use for instantiation of **assemble-container**.
+           If unset, **archives** will be used to populate if available, otherwise an empty image will be created.
+
+       build-command
+          Command to launch on builder container upon creation. Defaults to "/bin/freeze".
+
+       build-container
+           Name of build container. Defaults to <partname>_build.
+
+       build-dependencies
+           List of packages to be installed in builder container's chrooted environment, but not installed
+           on **assemble-container**.
+
+       build-env
+           List of environment variables to be set for packages building.
+
+       build-image
+           Name of build image. If unset, no building will be performed.
+
+       build-layout
+           Copies a local folder to **build-container**'s root with **docker cp**.
+
+       build-script
+          This shell script is executed after building Gentoo packages.
+
+       build-script-shell
+          Shell to use for script execution. Defaults to "/bin/sh".
+
+       build-script-user
+          User which executes the **build-script**. If unset, docker default is applied.
+
+       build-volumes-from
+          Volumes to be mounted on build container upon creation.
+
+       command
+           Sets **COMMAND** parameter on target image.
+
+       copy
+          List of extra paths to copy from builder container to assemble container,
+          separated by newline. To copy directories, end pathname with path separator.
+          To change destination name, append destination path on the same line, separated by space.
+
+       expose
+           Sets **EXPOSE** parameter on target image.
+
+       keep
+           Don't delete image upon uninstall.
+
+       labels
+           Sets **LABEL** parameters on target image, one per line with format KEY=VALUE.
+
+       layout
+           Copies a local folder to **assemble-container**'s root with **docker cp**.
+
+       layout-gid
+           When copying a layout onto **assemble-container**, this GID is set on destination files.
+
+       layout-uid
+           When copying a layout onto **assemble-container**, this UID is set on destination files.
+
+       mask
+           Sets /etc/portage/package.mask on builder container's chrooted environment, one per line.
+
+       name
+           Name of target image. Defaults to part name.
+
+       packages
+           List of packages to be built in builder container's chrooted environment and installed
+           on **assemble-container**.
+
+       platform
+           Target platform. Defaults to machine's platform.
+
+       processor
+           Target processor type. Defaults to machine's processor type.
+
+       script
+           Executes a shell script on **assemble-container** after installing Gentoo binary packages.
+
+       script-shell
+           Shell for **script** execution. Defaults to "/bin/sh".
+
+       script-user
+           User for **script** execution. Defaults to docker default.
+
+       tty
+           Assign a **Pseudo-TTY** to the **build-container** and **assemble-container**.
+
+       unmask
+           Sets /etc/portage/package.unmask on builder container's chrooted environment, one per line.
+
+       use
+           Sets /etc/portage/package.use on builder container's chrooted environment, one per line.
+
+       user
+           Sets **USER** parameter on target image.
+
+       variant
+           Target variant. Defaults to "dockeroo".
+
+       volumes
+           Sets **VOLUME** parameter on target image, one volume per line.
+
+       volumes-from
+           Mount volumes from specified container.
+    """
     subrecipe_class = DockerGentooBuildSubRecipe

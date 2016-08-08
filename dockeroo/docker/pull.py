@@ -49,4 +49,43 @@ class DockerPullSubRecipe(BaseDockerSubRecipe):
             self.engine.remove_image(self.name)
 
 class DockerPullRecipe(BaseGroupRecipe):
+    """
+    This recipe retrieves an image from a registry by calling **docker pull** with appropriate parameters.
+    If **username** and **password** are specified, **docker login** is called prior to pulling.
+
+    .. describe:: Usage
+
+       The following example buildout part pulls **ubuntu** image from DockerHub.
+
+    .. code-block:: ini
+
+       [ubuntu]
+       recipe = dockeroo:docker.pull
+       image = ubuntu
+
+    .. describe:: Configuration options
+
+        keep
+            Don't delete image upon uninstall.
+
+        password
+            Password for **docker login**. Defaults to unset.
+
+        machine-name
+           Docker machine where **image** will be pulled to.
+           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
+        name
+            Image name to pull. Use the same format as **docker pull** commandline.
+            Defaults to part name.
+
+        registry
+            Registry name. Defaults to DockerHub registry (index.docker.io).
+
+        username
+            Username for **docker login**. Defaults to unset.
+
+        timeout
+           **docker** command timeout.
+    """
     subrecipe_class = DockerPullSubRecipe

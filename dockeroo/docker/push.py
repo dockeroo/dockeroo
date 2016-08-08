@@ -46,4 +46,42 @@ class DockerPushSubRecipe(BaseDockerSubRecipe):
 
 
 class DockerPushRecipe(BaseGroupRecipe):
+    """
+    This recipe calls **docker push** with appropriate parameters.
+    **docker login** is called prior to pushing.
+    
+    .. describe:: Usage
+    
+       The following example buildout part pushes **my_image** to DockerHub.
+    
+    .. code-block:: ini
+    
+       [my_image_pull]
+       recipe = dockeroo:docker.push
+       image = my_image
+       username = my_dockerhub_username
+       password = my_dockerhub_password
+    
+    .. describe: Configuration options
+    
+       name
+           Image name to push. Use the same format as **docker push** commandline.
+           Defaults to part name.
+       
+       username
+           Username for **docker login**.
+       
+       password
+           Password for **docker login**.
+       
+       machine-name
+          Docker machine where **image** will be pushed from.
+          Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+       
+       registry
+           Registry name. Defaults to DockerHub registry (index.docker.io).
+       
+       timeout
+          **docker** command timeout.
+    """
     subrecipe_class = DockerPushSubRecipe
