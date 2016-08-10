@@ -4,29 +4,41 @@ Setup recipes
 dockeroo:setup.cmmi
 -------------------
 
-.. autoclass:: dockeroo.setup.cmmi::SetupCmmiRecipe
+.. module:: dockeroo.setup.cmmi
+
+.. autoclass:: SetupCmmiRecipe
 
 dockeroo:setup.download
 -----------------------
 
-.. autoclass:: dockeroo.setup.download::SetupDownloadRecipe
+.. module:: dockeroo.setup.download
+
+.. autoclass:: SetupDownloadRecipe
 
 dockeroo:setup.egg
 ------------------
 
-.. autoclass:: dockeroo.setup.egg::SetupEggRecipe
+.. module:: dockeroo.setup.egg
+
+.. autoclass:: SetupEggRecipe
 
 dockeroo:setup.python-script
 ----------------------------
 
-.. autoclass:: dockeroo.setup.python_script::SetupPythonScriptRecipe
+.. module:: dockeroo.setup.python_script
+
+.. autoclass:: SetupPythonScriptRecipe
 
 dockeroo:setup.shell-script
 ---------------------------
 
-.. autoclass:: dockeroo.setup.shell_script::SetupShellScriptRecipe
+.. module:: dockeroo.setup.shell_script
+
+.. autoclass:: SetupShellScriptRecipe
 
 dockeroo:setup.template
 -----------------------
 
-.. autoclass:: dockeroo.setup.template::SetupTemplateRecipe
+.. module:: dockeroo.setup.template
+
+.. autoclass:: SetupTemplateRecipe

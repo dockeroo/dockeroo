@@ -4,4 +4,6 @@ Docker Machine recipes
 dockeroo:machine.create
 -----------------------
 
-.. autoclass:: dockeroo.docker_machine.create::DockerMachineCreateRecipe
+.. module:: dockeroo.docker_machine.create
+
+.. autoclass:: DockerMachineCreateRecipe
