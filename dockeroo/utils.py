@@ -127,43 +127,83 @@ class OptionGroup(object):
     def copy(self):
         return dict([(k, self[k]) for k in self])
 
+GLOBAL_OPTIONS = {
+    '__buildout_installed__',
+    '__buildout_signature__',
+    'install-target',
+    'keep-on-error',
+    'recipe',
+    'specs',
+    'target',
+    'uninstall-target',
+    'update-target',
+}
+
 class OptionRepository(object):
-    def __init__(self, options):
+    def __init__(self, options, **kwargs):
         self.options = options
         self.groups = dict()
         self.group_keys = defaultdict(set)
         for option in self.options.keys():
+            if option in GLOBAL_OPTIONS:
+                continue
             split = option.split('.', 1)
             if len(split) > 1:
                 self.group_keys[split[0]].add(split[1])
             else:
                 self.group_keys[None].add(split[0])
+        for key, value in kwargs.items():
+            for group_name in self.group_keys:
+                self[group_name].setdefault(key, value)
 
     def __iter__(self):
         return iter(self.group_keys)
 
-    def __getitem__(self, group):
-        if group in self.group_keys:
-            if group not in self.groups:
-                self.groups[group] = OptionGroup(self, group)
-            return self.groups[group]
+    def __getitem__(self, name):
+        group = self.group(name=name)
+        if group is None:
+            raise KeyError(name)
+        return group
+
+    def group(self, name=None):
+        if name in self.group_keys:
+            if name not in self.groups:
+                self.groups[name] = OptionGroup(self, name)
+            return self.groups[name]
         else:
-            raise KeyError
+            return None
 
     def get(self, key, default=None):
+        if key in GLOBAL_OPTIONS:
+            return self.options.get(key, default)
         return self[None].get(key, default)
 
     def get_as_bool(self, key, default=None):
+        if key in GLOBAL_OPTIONS:
+            return string_as_bool(self.options.get(key, default))
         return self[None].get_as_bool(key, default)
 
+    def has_key(self, key):
+        if key in GLOBAL_OPTIONS:
+            return key in self.options
+        return key in self[None]
+
     def set(self, key, value):
-        return self[None].set(key, value)
+        if key in GLOBAL_OPTIONS:
+            self.options[key] = value
+        else:
+            self[None].set(key, value)
 
     def setdefault(self, key, value):
+        if key in GLOBAL_OPTIONS:
+            return self.options.setdefault(key, value)
         return self[None].setdefault(key, value)
 
     def delete(self, key):
-        return self[None].delete(key)
+        if key in GLOBAL_OPTIONS:
+            del self.global_options[key]
+        else:
+            return self[None].delete(key)
 
 def merge(lst1, lst2):
     def _merge(lst1, lst2):
