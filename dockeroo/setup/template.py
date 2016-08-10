@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+import os
+
 from zc.buildout import UserError
 
 from dockeroo import BaseSubRecipe, BaseGroupRecipe
@@ -28,7 +30,7 @@ class SetupTemplateSubRecipe(BaseSubRecipe):
         super(SetupTemplateSubRecipe, self).initialize()
         self.content = self.options.get('content', None)
         self.input_path = self.options.get('input-path', None)
-        self.output_path = self.options.get('output-path')
+        self.output_path = self.options.get('output-path', os.path.join(self.location, self.name))
         if bool(self.content) == bool(self.input_path):
             if self.content:
                 raise UserError('''You cannot use "content" and "input-path" at the same time.''')

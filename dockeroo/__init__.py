@@ -515,6 +515,10 @@ class BaseSubRecipe(object):
         self.logger = recipe.logger
         self.options = recipe.options[group]
         self.shell = self.options.get('shell', '/bin/sh')
+        self.options.setdefault('location',
+                                self.recipe.default_location \
+                                if self.group is None \
+                                else self.recipe.options[None].location)
 
     @property
     def name(self):
@@ -580,11 +584,7 @@ class BaseSubRecipe(object):
     @property
     @reify
     def location(self):
-        if self.group is None:
-            default = self.recipe.default_location
-        else:
-            default = self.recipe.options[None].location
-        return self.options.get('location', default)
+        return self.options.get('location')
 
     @property
     @reify
