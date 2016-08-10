@@ -103,10 +103,9 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
     def __init__(self, buildout, name, options):
         self.logger = logging.getLogger(__name__)
         self.cleanup_paths = set()
-        self.options = OptionRepository(options)
+        self.name = name
+        self.options = OptionRepository(options, name=self.name)
         self.buildout = buildout
-        self.part_name = name
-        self.options.setdefault('name', name)
         self.filterset = RecipeFilterset(self)
         self.log_handler = logging.StreamHandler(sys.stdout)
         self._save_logging = {}
@@ -151,14 +150,6 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
         self.log_handler.setFormatter(logging.Formatter(fmt))
         for logger in [logging.getLogger(x) for x in self.loggers]:
             logger.setLevel(level - verbosity)
-
-    @property
-    def name(self):
-        return self.options.get('name', None)
-
-    @name.setter
-    def name(self, value):
-        self.options.set('name', value)
 
     @property
     @reify
@@ -249,10 +240,10 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
             raise UserError('''Invalid verbosity "{}"'''.format(verbosity))
 
     def initialize_target(self, target, mandatory=False):
-        if 'update-call' in self.options[None]:
+        if self.options.has_key('{}-target'.format(target)):
             setattr(self, '_{}_target'.format(target),
                     self.options.get('{}-target'.format(target)))
-        elif 'call' in self.options[None]:
+        elif self.options.has_key('target'):
             setattr(self, '_{}_target'.format(target),
                     self.options.get('target'))
         elif hasattr(self, '{}_target'.format(target)):
@@ -260,7 +251,7 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
                     getattr(self, '{}_target'.format(target)))
         elif mandatory:
             raise UserError(
-                '''You must provide a "call" or "{}-call" field.'''
+                '''You must provide a "target" or "{}-target" field.'''
                 .format(target))
         else:
             self._update_target = None
@@ -517,8 +508,12 @@ class BaseSubRecipe(object):
         self.shell = self.options.get('shell', '/bin/sh')
         self.options.setdefault('location',
                                 self.recipe.default_location \
-                                if self.group is None \
-                                else self.recipe.options[None].location)
+                                if self.group is None or None not in self.recipe.subrecipes \
+                                else self.recipe.subrecipes.get(None).location)
+        self.options.setdefault('executable',
+                                self.recipe.default_executable \
+                                if self.group is None or None not in self.recipe.subrecipes \
+                                else self.recipe.subrecipes.get(None).executable)
 
     @property
     def name(self):
@@ -537,11 +532,7 @@ class BaseSubRecipe(object):
     @property
     @reify
     def executable(self):
-        if self.group is None:
-            default = self.recipe.default_executable
-        else:
-            default = self.recipe.options[None].location
-        return self.options.get('executable', default)
+        return self.options.get('executable')
 
     @property
     @reify

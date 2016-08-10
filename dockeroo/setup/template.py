@@ -17,6 +17,7 @@
 
 
 import os
+from string import Template as StringTemplate
 
 from zc.buildout import UserError
 
@@ -30,7 +31,8 @@ class SetupTemplateSubRecipe(BaseSubRecipe):
         super(SetupTemplateSubRecipe, self).initialize()
         self.content = self.options.get('content', None)
         self.input_path = self.options.get('input-path', None)
-        self.output_path = self.options.get('output-path', os.path.join(self.location, self.name))
+        self.options.setdefault('output-path', os.path.join(self.location, self.name))
+        self.output_path = self.options.get('output-path')
         if bool(self.content) == bool(self.input_path):
             if self.content:
                 raise UserError('''You cannot use "content" and "input-path" at the same time.''')
@@ -40,9 +42,10 @@ class SetupTemplateSubRecipe(BaseSubRecipe):
     def install(self):
         if self.input_path is not None:
             with open(self.input_path, 'rb') as input_path_fh:
-                output = Template(input_path_fh.read()).substitute(**self.options)
+                output = StringTemplate(input_path_fh.read()).substitute(**self.options.copy())
         else:
             output = self.content
+        self.recipe.mkdir(os.path.dirname(self.output_path))
         with open(self.output_path, 'wb') as output_path_fh:
             output_path_fh.write(output)
         return self.mark_completed()
