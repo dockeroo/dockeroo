@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import re
 import shutil
 import tempfile
 
@@ -30,6 +31,8 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
 
     def initialize(self):
         super(DockerGentooBuildSubRecipe, self).initialize()
+
+        base_name = re.sub(r'\W+', '_', self.name)
 
         self.archives = []
         for url, prefix, md5sum in \
@@ -49,7 +52,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.build_dependencies = [f for f in [x.strip() for x in \
             self.options.get('build-dependencies', '').splitlines()] if f]
         self.build_command = self.options.get('build-command', "/bin/freeze")
-        self.build_container = "{}_build".format(self.name)
+        self.build_container = "{}_build".format(base_name)
         self.build_layout = self.options.get('build-layout', None)
         self.build_image = self.options.get('build-image', None)
         self.build_env = dict([y for y in [x.strip().split(
@@ -64,7 +67,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                                    self.options.get('build-script').replace('$$', '$').splitlines()]
                        if f])) if self.options.get('build-script', None) is not None else None
 
-        self.assemble_container = "{}_assemble".format(self.name)
+        self.assemble_container = "{}_assemble".format(base_name)
         self.copy = [merge([None, None], y.split()[:2]) for y in
                      [f for f in [x.strip() for x in self.options.get('copy', '').splitlines()]
                       if f]]
