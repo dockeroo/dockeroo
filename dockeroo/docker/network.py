@@ -52,7 +52,7 @@ class DockerNetworkSubRecipe(BaseDockerSubRecipe):
 
     def uninstall(self):
         if not self.keep:
-            self.remove_network(self.name)
+            self.engine.remove_network(self.name)
 
 
 class DockerNetworkRecipe(BaseGroupRecipe):

@@ -63,7 +63,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
         self.volumes_from = self.options.get('volumes-from', None)
 
     def install(self):
-        if not any([x for x in self.images() if self.name == x['image']]):
+        if not any([x for x in self.engine.images() if self.name == x['image']]):
             if not self.archives:
                 raise UserError(
                     "Image does not exist and no source specified.")
@@ -71,7 +71,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
                 archive.download(self.buildout)
             self.engine.import_archives(self.name, *self.archives)
 
-        if not self.containers(include_stopped=True, name=self.container):
+        if not self.engine.containers(include_stopped=True, name=self.container):
             self.engine.create_container(self.container,
                                          self.name, command=self.command,
                                          privileged=True, tty=self.tty, volumes=self.volumes,

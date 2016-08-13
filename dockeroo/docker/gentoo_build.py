@@ -150,9 +150,9 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                                          volumes_from=self.build_volumes_from)
             self.engine.start_container(self.build_container)
             if self.platform != self.engine.platform:
-                self.config_binfmt(self.build_container, self.platform)
+                self.engine.config_binfmt(self.build_container, self.platform)
             if self.build_layout:
-                self.load_layout(self.build_container, self.build_layout)
+                self.engine.load_layout(self.build_container, self.build_layout)
             self.add_package_modifier('accept_keywords', self.accept_keywords)
             self.add_package_modifier('mask', self.masks)
             self.add_package_modifier('unmask', self.unmasks)

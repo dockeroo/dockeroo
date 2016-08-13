@@ -89,7 +89,7 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
             return (self.completed, )
 
     def uninstall(self):
-        self.remove_container(self.build_container)
+        self.engine.remove_container(self.build_container)
 
 
 class DockerGentooDiskImageRecipe(BaseGroupRecipe):
