@@ -669,9 +669,12 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         args = ['cp', '-', "{}:/".format(container)]
         proc = DockerProcess(self, args, stdin=PIPE)
         tar = tarfile.open(fileobj=proc.stdin, mode='w|')
-        tar.add(
-            os.path.join(self.buildout['buildout']['bin-directory']),
-            arcname="bin", filter=layout_filter, recursive=False)
+        bindir = tarfile.TarInfo(name="bin")
+        bindir.uid = 0
+        bindir.gid = 0
+        bindir.mode = 0o0755
+        bindir.type = tarfile.DIRTYPE
+        tar.addfile(bindir)
         tar.add(os.path.join(os.path.dirname(__file__), 'freeze', 'freeze_{}'.format(
             arch)), arcname="bin/freeze", filter=layout_filter)
         tar.close()
