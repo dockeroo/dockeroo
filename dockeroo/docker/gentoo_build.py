@@ -126,7 +126,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
     def create_base_image(self, name):
         if self.archives:
             for archive in self.archives:
-                archive.download(self.buildout)
+                archive.download(self.recipe.buildout)
             self.engine.import_archives(name, *self.archives)
         else:
             root = tempfile.mkdtemp()

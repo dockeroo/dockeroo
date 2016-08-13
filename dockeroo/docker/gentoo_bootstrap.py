@@ -68,7 +68,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
                 raise UserError(
                     "Image does not exist and no source specified.")
             for archive in self.archives:
-                archive.download(self.buildout)
+                archive.download(self.recipe.buildout)
             self.engine.import_archives(self.name, *self.archives)
 
         if not self.engine.containers(include_stopped=True, name=self.container):
