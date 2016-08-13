@@ -40,7 +40,7 @@ class DockerPullSubRecipe(BaseDockerSubRecipe):
 
     def update(self):
         if self.is_image_updated(self.name) or \
-            not self.engine.images(name=self.name):
+            not next(self.engine.images(name=self.name), None):
             return self.install()
         return self.mark_completed()
 

@@ -212,7 +212,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             (self.build_layout and self.is_layout_updated(self.build_layout)) or \
             (self.build_image and self.is_image_updated(self.build_image)) or \
             (self.base_image and self.is_image_updated(self.base_image)) or \
-                not self.engine.images(name=self.name):
+                not next(self.engine.images(name=self.name), None):
             return self.install()
         return self.mark_completed()
 

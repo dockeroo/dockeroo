@@ -100,7 +100,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
 
     def update(self):
         if (self.layout and self.is_layout_updated(self.layout)) or \
-            not self.engine.images(name=self.name):
+            not next(self.engine.images(name=self.name), None):
             return self.install()
         return self.mark_completed()
 
