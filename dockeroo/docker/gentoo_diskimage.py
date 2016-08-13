@@ -51,7 +51,7 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
         self.base_image = self.options['base-image']
         self.image_file = self.options['image-file']
 
-        self.platform = self.options.get('platform', self.machine.platform)
+        self.platform = self.options.get('platform', self.engine.platform)
         self.arch = self.options.get('arch', self.platform)
         self.tty = string_as_bool(self.options.get('tty', False))
 
@@ -64,7 +64,7 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
                                      privileged=True, tty=self.tty,
                                      volumes_from=self.build_volumes_from)
         self.engine.start_container(self.build_container)
-        if self.platform != self.machine.platform:
+        if self.platform != self.engine.platform:
             self.engine.config_binfmt(self.build_container, self.platform)
         if self.prepare_script:
             self.engine.run_script(self.build_container, self.prepare_script,

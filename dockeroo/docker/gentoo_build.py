@@ -76,7 +76,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.packages = [f for f in
                          [x.strip() for x in self.options.get('packages', '').splitlines()]
                          if f]
-        self.platform = self.options.get('platform', self.machine.platform)
+        self.platform = self.options.get('platform', self.engine.platform)
         self.arch = self.options.get('arch', self.platform)
         self.processor = self.options.get('processor', self.platform)
         self.variant = self.options.get('variant', 'dockeroo')
@@ -149,7 +149,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                                          privileged=True, tty=self.tty,
                                          volumes_from=self.build_volumes_from)
             self.engine.start_container(self.build_container)
-            if self.platform != self.machine.platform:
+            if self.platform != self.engine.platform:
                 self.config_binfmt(self.build_container, self.platform)
             if self.build_layout:
                 self.load_layout(self.build_container, self.build_layout)
@@ -192,7 +192,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             self.engine.load_layout(self.assemble_container, self.layout,
                                     uid=self.layout_uid, gid=self.layout_gid)
         if self.assemble_script:
-            if self.platform != self.machine.platform:
+            if self.platform != self.engine.platform:
                 self.engine.config_binfmt(self.assemble_container, self.platform)
             self.engine.run_script(self.assemble_container, self.assemble_script,
                                    shell=self.assemble_script_shell, user=self.assemble_script_user)

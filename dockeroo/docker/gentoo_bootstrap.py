@@ -37,7 +37,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
         self.keep = string_as_bool(self.options.get('keep', False))
         self.layout = self.options.get('layout', None)
         self.crossdev_platform = self.options.get(
-            'crossdev-platform', self.machine.platform)
+            'crossdev-platform', self.engine.platform)
         self.build_shell = self.options.get('build-shell', self.shell)
         self.build_script = "#!{}\n{}".format(
             self.build_shell,
@@ -87,7 +87,7 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
         self.engine.start_container(self.container)
 
         if self.build_script:
-            if self.crossdev_platform != self.machine.platform:
+            if self.crossdev_platform != self.engine.platform:
                 self.engine.config_binfmt(self.container, self.crossdev_platform)
             self.engine.run_script(self.container, self.build_script)
 
