@@ -52,26 +52,36 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
 class DockerBuildRecipe(BaseGroupRecipe):
     """
     This recipe creates a docker image by building a Dockerfile using **docker build**.
-   
+
     .. describe:: Usage
-    
+
        The following example buildout part creates a docker image of ubuntu.
-       
+
     .. code-block:: ini
-    
+
        [ubuntu]
        recipe = dockeroo:docker.build
        source = git@github.com:dockerfile/ubuntu.git
-    
+
     .. describe:: Configuration options
-    
-       name
-           Name of the image to apply as tag. Defaults to part name.
-       
-       source
-           Path or URL to pass as argument to **docker build**.
-       
+
        build-args
            List of build arguments, one per line, expressed as KEY=VALUE.
+
+       machine-name
+           Docker machine where **image** will be created.
+           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
+       keep
+           Don't delete image upon uninstall.
+
+       name
+           Name of the image to apply as tag. Defaults to part name.
+
+       source
+           Path or URL to pass as argument to **docker build**.
+
+       timeout
+          **docker** command timeout.
     """
     subrecipe_class = DockerBuildSubRecipe

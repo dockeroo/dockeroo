@@ -121,7 +121,7 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
     2. Create a container from such image.
     3. Install "freeze" binary into the container. This is a simple no-op binary executable.
     4. If a **layout** is defined, copy layout contents onto container's root.
-    5. Execute **script**.
+    5. Execute **build-script**.
     6. If **commit** is enabled, commit modifications of image.
     
     .. describe:: Usage
@@ -151,7 +151,7 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
        commit = true
        keep = true
        layout = ${buildout:containers-directory}/builder_${:crossdev-arch}
-       script =
+       build-script =
            test -d /usr/portage/profiles || emerge-webrsync
            emerge --sync
            emerge -uDNvkb world
@@ -245,9 +245,6 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
        container
            Name of build container.
        
-       image
-           Name of destination image.
-       
        keep
            Don't delete image upon uninstall.
        
@@ -258,7 +255,10 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
           Docker machine where **build-image** and **base-image** reside.
           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
        
-       script
+       name 
+           Name of destination image. Defaults to part name.
+       
+       build-script
            Execute this script after extraction of archives filesystem and import of layout.
        
        timeout                                                                                                                                                                                          

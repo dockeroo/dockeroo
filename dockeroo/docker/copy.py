@@ -47,15 +47,15 @@ class DockerCopySubRecipe(BaseDockerSubRecipe):
 class DockerCopyRecipe(BaseGroupRecipe):
     """
     This recipe copies a list of paths from a container to another.
-    
+
     .. describe:: Usage
-    
+
        The following example buildout part copies all /lib directory and
        /bin/sh from **src** container to **dst** container. Additionally, /bin/sh
        is also copied to /bin/bash on **dst** container.
-    
+
     .. code-block:: ini
-    
+
        [copy_part]
        recipe = dockeroo:docker.copy
        container-from = src
@@ -64,18 +64,26 @@ class DockerCopyRecipe(BaseGroupRecipe):
            /lib/
            /bin/sh
            /bin/sh /bin/bash
-   
+
     .. describe:: Configuration options
-    
+
        container-from
           Source container.
-       
+
        container-to
           Destination container.
-       
+
+       machine-name
+           Docker machine where **containers** reside.
+           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
+
        paths
           List of paths to copy, separated by newline. To copy directories,
           end pathname with path separator. To change destination name,
           append destination path on the same line, separated by space.
+
+       timeout
+          **docker** command timeout.
+
     """
     subrecipe_class = DockerCopySubRecipe

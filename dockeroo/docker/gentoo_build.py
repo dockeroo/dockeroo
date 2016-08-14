@@ -259,7 +259,7 @@ class DockerGentooBuildRecipe(BaseGroupRecipe):
            sys-apps/s6-rc
            app-admin/monit
        shell = /bin/bash
-       script =
+       assemble-script =
            /bin/busybox --help | \\
            /bin/busybox sed -e '1,/^Currently defined functions:/d' \\
              -e 's/[ \\t]//g' -e 's/,$$//' -e 's/,/\\n/g' | \\
@@ -369,13 +369,13 @@ class DockerGentooBuildRecipe(BaseGroupRecipe):
        processor
            Target processor type. Defaults to machine's processor type.
 
-       script
+       assemble-script
            Executes a shell script on **assemble-container** after installing Gentoo binary packages.
 
-       script-shell
+       assemble-script-shell
            Shell for **script** execution. Defaults to "/bin/sh".
 
-       script-user
+       assemble-script-user
            User for **script** execution. Defaults to docker default.
 
        tty

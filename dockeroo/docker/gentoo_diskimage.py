@@ -172,6 +172,9 @@ class DockerGentooDiskImageRecipe(BaseGroupRecipe):
        image-file
           Disk image file which is extracted from build container.
 
+       location 
+          Path where disk image will be saved. Defaults to ${buildout:parts-directory}/${:name}.
+
        machine-name
           Docker machine where **build-image** and **base-image** reside.
           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.

@@ -25,9 +25,14 @@ from dockeroo.utils import string_as_bool
 
 class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disable=too-many-instance-attributes
     """
+
     A recipe to create a new docker machine.
 
-    Example:
+    .. describe:: Usage
+
+       The following example creates a new virtualbox instance with **docker-machine**:
+
+    .. code-block:: python
 
         >>> with buildout_test(
         ... '''
@@ -67,6 +72,67 @@ class DockerMachineCreateSubRecipe(BaseDockerMachineSubRecipe): # pylint: disabl
         Docker is up and running!
         To see how to connect your Docker Client to the Docker Engine running on this virtual machine, run: docker-machine env test-part
         Updating part.
+
+    .. describe:: Configuration options
+
+       This recipe accepts the following options:
+
+       driver
+           Driver to create machine with.
+
+       engine-install-url
+           Custom URL to use for engine installation
+
+       engine-opt
+           Arbitrary flags to include with the created engine in the form flag=value
+
+       engine-insecure-registry
+           Insecure registries to allow with the created engine, one per line.
+
+       engine-registry-mirror
+           Registry mirrors to use, one per line.
+
+       engine-label
+           Labels for the created engine, one per line.
+
+       engine-storage-driver
+           Storage driver to use with the engine
+
+       engine-env
+           Environment variables to set in the engine, one per line with key=value format.
+
+       virtualbox-boot2docker-url
+           The URL of the boot2docker image. Defaults to the latest available version
+
+       virtualbox-cpu-count
+           Number of CPUs for the machine (-1 to use the number of CPUs available). Defaults to 1.
+
+       virtualbox-disk-size
+           Size of disk for host in MB. Defaults to 20000.
+
+       virtualbox-host-dns-resolver
+           Use the host DNS resolver
+
+       virtualbox-dns-proxy
+           Proxy all DNS requests to the host
+
+       virtualbox-hostonly-cidr
+           The Host Only CIDR. Defaults to 192.168.99.1/24.
+
+       virtualbox-hostonly-nicpromisc
+           The Host Only Network Adapter Promiscuous Mode. Defaults to deny.
+
+       virtualbox-hostonly-nictype
+           The Host Only Network Adapter Type. Defaults to 82540EM.
+
+       virtualbox-import-boot2docker-vm
+           The name of a Boot2Docker VM to import
+
+       virtualbox-memory
+           Size of memory for host in MB. Defaults to 1024.
+
+       virtualbox-no-share
+           Disable the mount of your home directory
     """
 
     def initialize(self):
