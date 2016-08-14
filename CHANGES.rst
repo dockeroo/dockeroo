@@ -1,6 +1,20 @@
 Changelog
 =========
 
+0.22 (14-08-2016)
+-----------------
+
+- Bugfix release.
+
+
+0.21 (10-08-2016)
+-----------------
+
+- Updated dockeroo:setup.template to handle default output-path.
+- Improved handling of recipe default location.
+- Several bug fixes.
+
+
 0.20 (08-08-2016)
 -----------------
 
