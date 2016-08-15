@@ -56,8 +56,6 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
         self.tty = string_as_bool(self.options.get('tty', False))
 
     def install(self):
-        self.location = self.options.get("location", os.path.join(
-            self.buildout["buildout"]["parts-directory"], self.name))
         self.engine.remove_container(self.build_container)
         self.engine.create_container(self.build_container, self.build_image,
                                      command=self.build_command,
