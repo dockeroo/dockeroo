@@ -74,6 +74,7 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
             self.engine.run_script(self.build_container, self.build_script,
                                    shell=self.build_script_shell,
                                    user=self.build_script_user)
+        self.recipe.mkdir(self.location)
         self.engine.export_files(self.build_container, self.image_file, self.location)
         self.engine.remove_container(self.build_container)
         self.engine.clean_stale_images()
