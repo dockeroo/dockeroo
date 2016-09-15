@@ -1,1 +1,2 @@
 include *.rst
+recursive-include dockeroo/docker/freeze *
