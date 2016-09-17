@@ -132,10 +132,10 @@ class DockerMachine(object):
 
     def config_binfmt(self, arch):
         self.run_cmd('[ -f /proc/sys/fs/binfmt_misc/register ] || '
-                     'mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc')
+                     'sudo mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc')
         self.run_cmd(
             '[ -f /proc/sys/fs/binfmt_misc/{arch} ] || '
-            'echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(arch=arch, binfmt={
+            'sudo /bin/sh -c "echo \'{binfmt}\' >/proc/sys/fs/binfmt_misc/register"'.format(arch=arch, binfmt={
                 'aarch64':
                     r':{arch}:M::'
                     r'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:'

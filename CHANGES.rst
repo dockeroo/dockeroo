@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.25 (17-09-2016)
+-----------------
+
+- Fixed config_binfmt to execute commands through sudo.
+
+
 0.24 (17-09-2016)
 -----------------
 
