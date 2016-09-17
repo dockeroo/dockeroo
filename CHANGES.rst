@@ -1,6 +1,13 @@
 Changelog
 =========
 
+0.24 (17-09-2016)
+-----------------
+
+- Added initial support for processor function upon copy path.
+- Moved config_binfmt support to DockerMachine.
+
+
 0.23 (15-09-2016)
 -----------------
 

@@ -56,14 +56,17 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
         self.tty = string_as_bool(self.options.get('tty', False))
 
     def install(self):
+        if self.platform != self.engine.platform:
+            if self.engine.machine is not None:
+                self.engine.machine.config_binfmt(self.crossdev_platform)
+            else:
+                raise UserError("docker-machine is not defined but binfmt configuration is needed.")
         self.engine.remove_container(self.build_container)
         self.engine.create_container(self.build_container, self.build_image,
                                      command=self.build_command,
                                      privileged=True, tty=self.tty,
                                      volumes_from=self.build_volumes_from)
         self.engine.start_container(self.build_container)
-        if self.platform != self.engine.platform:
-            self.engine.config_binfmt(self.build_container, self.platform)
         if self.prepare_script:
             self.engine.run_script(self.build_container, self.prepare_script,
                                    shell=self.build_script_shell,

@@ -130,6 +130,74 @@ class DockerMachine(object):
         if return_output:
             return proc.stdout.read().strip()
 
+    def config_binfmt(self, container, arch):
+        self.run_cmd('[ -f /proc/sys/fs/binfmt_misc/register ] || '
+                     'mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc')
+        self.run_cmd(
+            '[ -f /proc/sys/fs/binfmt_misc/{arch} ] || '
+            'echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(arch=arch, binfmt={
+                'aarch64':
+                    r':{arch}:M::'
+                    r'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'arm':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'armeb':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'alpha':
+                    r':{arch}:M::'
+                    r'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x26\x90:'
+                    r'\xff\xff\xff\xff\xff\xfe\xfe\xff\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'mips':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'mipsel':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08\x00:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'ppc':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x14:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'sh4':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a\x00:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xfb\xff\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'sh4eb':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+                'sparc':
+                    r':{arch}:M::'
+                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x02:'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
+                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
+                    r'/usr/bin/qemu-{arch}:',
+            }[arch].format(arch=arch)))
+
 
 class BaseDockerMachineSubRecipe(BaseSubRecipe):
     pass

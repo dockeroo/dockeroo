@@ -276,76 +276,6 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
             raise ExternalProcessError(
                 "Error committing container \"{}\"".format(container), proc)
 
-    def config_binfmt(self, container, arch):
-        self.run_cmd(
-            container, '[ -f /proc/sys/fs/binfmt_misc/register ] || '
-                       'mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc', privileged=True)
-        self.run_cmd(
-            container,
-            '[ -f /proc/sys/fs/binfmt_misc/{arch} ] || '
-            'echo "{binfmt}" >/proc/sys/fs/binfmt_misc/register'.format(arch=arch, binfmt={
-                'aarch64':
-                    r':{arch}:M::'
-                    r'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'arm':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'armeb':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'alpha':
-                    r':{arch}:M::'
-                    r'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x26\x90:'
-                    r'\xff\xff\xff\xff\xff\xfe\xfe\xff\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'mips':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'mipsel':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x08\x00:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'ppc':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x14:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'sh4':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a\x00:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xfb\xff\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'sh4eb':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x2a:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-                'sparc':
-                    r':{arch}:M::'
-                    r'\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x02:'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff'
-                    r'\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:'
-                    r'/usr/bin/qemu-{arch}:',
-            }[arch].format(arch=arch)), privileged=True)
-
     @listify
     def containers(self, include_stopped=False, **filters):
         params = ['ID', 'Image', 'Command', 'CreatedAt', 'RunningFor',
@@ -400,10 +330,12 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         self.logger.info("Copying layout \"%s\" on \"%s\"", src, dst)
         return copy_tree(src, dst)
 
-    def copy_path(self, container_src, container_dst, src, dst=None, dst_exec=False):
+    def copy_path(self, container_src, container_dst, src, dst=None, dst_exec=False, processor=None):
         if dst is None:
             dst = os.path.join(*os.path.dirname(src).split(os.sep))
-        self.logger.info("Copying files from container \"%s:%s\" to container \"%s:/%s\"",
+        if processor is None:
+            processor = lambda x: x
+        self.logger.info("Copying files from container \"%s:%s\" to container \"%s:%s\"",
                          container_src, src, container_dst, dst)
         if src.endswith('/'):
             src_prefix = os.path.dirname(src).split(os.sep)[-1] + '/'
@@ -433,7 +365,9 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         tar_in = tarfile.open(fileobj=p_in.stdout, mode='r|')
         tar_out = tarfile.open(fileobj=p_out.stdin, mode='w|')
         for tarinfo in tar_in:
-            tarinfo = layout_filter(tarinfo)
+            tarinfo = processor(layout_filter(tarinfo))
+            if tarinfo is None:
+                continue
             if tarinfo.isreg():
                 tar_out.addfile(tarinfo, fileobj=tar_in.extractfile(tarinfo))
             else:

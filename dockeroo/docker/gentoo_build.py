@@ -135,6 +135,11 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         return name
 
     def install(self):
+        if self.platform != self.engine.platform:
+            if self.engine.machine is not None:
+                self.engine.machine.config_binfmt(self.crossdev_platform)
+            else:
+                raise UserError("docker-machine is not defined but binfmt configuration is needed.")
         if self.base_image:
             base_image = self.base_image
         else:
@@ -152,8 +157,6 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                                          privileged=True, tty=self.tty,
                                          volumes_from=self.build_volumes_from)
             self.engine.start_container(self.build_container)
-            if self.platform != self.engine.platform:
-                self.engine.config_binfmt(self.build_container, self.platform)
             if self.build_layout:
                 self.engine.load_layout(self.build_container, self.build_layout)
             self.add_package_modifier('accept_keywords', self.accept_keywords)
@@ -195,8 +198,6 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             self.engine.load_layout(self.assemble_container, self.layout,
                                     uid=self.layout_uid, gid=self.layout_gid)
         if self.assemble_script:
-            if self.platform != self.engine.platform:
-                self.engine.config_binfmt(self.assemble_container, self.platform)
             self.engine.run_script(self.assemble_container, self.assemble_script,
                                    shell=self.assemble_script_shell, user=self.assemble_script_user)
         self.engine.commit_container(self.assemble_container, self.name,

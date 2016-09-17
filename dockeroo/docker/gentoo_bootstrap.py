@@ -88,7 +88,10 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
 
         if self.build_script:
             if self.crossdev_platform != self.engine.platform:
-                self.engine.config_binfmt(self.container, self.crossdev_platform)
+                if self.engine.machine is not None:
+                    self.engine.machine.config_binfmt(self.crossdev_platform)
+                else:
+                    raise UserError("docker-machine is not defined but binfmt configuration is needed.")
             self.engine.run_script(self.container, self.build_script)
 
         if self.commit:
