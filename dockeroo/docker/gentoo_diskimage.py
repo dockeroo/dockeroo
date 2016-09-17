@@ -58,7 +58,7 @@ class GentooDiskImageSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-many-
     def install(self):
         if self.platform != self.engine.platform:
             if self.engine.machine is not None:
-                self.engine.machine.config_binfmt(self.crossdev_platform)
+                self.engine.machine.config_binfmt(self.platform)
             else:
                 raise UserError("docker-machine is not defined but binfmt configuration is needed.")
         self.engine.remove_container(self.build_container)
