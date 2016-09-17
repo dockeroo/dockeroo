@@ -130,7 +130,7 @@ class DockerMachine(object):
         if return_output:
             return proc.stdout.read().strip()
 
-    def config_binfmt(self, container, arch):
+    def config_binfmt(self, arch):
         self.run_cmd('[ -f /proc/sys/fs/binfmt_misc/register ] || '
                      'mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc')
         self.run_cmd(
