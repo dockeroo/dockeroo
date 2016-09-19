@@ -66,7 +66,14 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             '\n'.join([f for f in [x.strip() for x in
                                    self.options.get('build-script').replace('$$', '$').splitlines()]
                        if f])) if self.options.get('build-script', None) is not None else None
-
+        self.pre_build_script_user = self.options.get('pre-build-script-user', None)
+        self.pre_build_script_shell = self.options.get(
+            'pre-build-script-shell', self.shell)
+        self.pre_build_script = "#!{}\n{}".format(
+            self.pre_build_script_shell,
+            '\n'.join([f for f in [x.strip() for x in
+                                   self.options.get('pre-build-script').replace('$$', '$').splitlines()]
+                       if f])) if self.options.get('pre-build-script', None) is not None else None
         self.assemble_container = "{}_assemble".format(base_name)
         self.copy = [merge([None, None], y.split()[:2]) for y in
                      [f for f in [x.strip() for x in self.options.get('copy', '').splitlines()]
@@ -167,6 +174,9 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                 self.build_container,
                 "chroot-{arch}-docker -c \"eclean packages && emaint binhost --fix\""
                 .format(arch=self.arch))
+            if self.pre_build_script:
+                self.engine.run_script(self.build_container, self.pre_build_script,
+                                       shell=self.pre_build_script_shell, user=self.pre_build_script_user)
             self.engine.run_cmd(
                 self.build_container,
                 "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
@@ -320,7 +330,7 @@ class DockerGentooBuildRecipe(BaseGroupRecipe):
           This shell script is executed after building Gentoo packages.
 
        build-script-shell
-          Shell to use for script execution. Defaults to "/bin/sh".
+          Shell to use for **build-script** execution. Defaults to "/bin/sh".
 
        build-script-user
           User which executes the **build-script**. If unset, docker default is applied.
@@ -366,6 +376,15 @@ class DockerGentooBuildRecipe(BaseGroupRecipe):
 
        platform
            Target platform. Defaults to machine's platform.
+
+       pre-build-script
+          This shell script is executed before building Gentoo packages.
+
+       pre-build-script-shell
+          Shell to use for **pre-build-script** execution. Defaults to "/bin/sh".
+
+       pre-build-script-user
+          User which executes the **pre-build-script**. If unset, docker default is applied.
 
        processor
            Target processor type. Defaults to machine's processor type.

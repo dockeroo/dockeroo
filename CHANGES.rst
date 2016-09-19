@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.26 (19-09-2016)
+-----------------
+
+- Added support for pre-build-{script,shell,script} parameters on dockeroo:gentoo-build recipe.
+
+
 0.25 (17-09-2016)
 -----------------
 
