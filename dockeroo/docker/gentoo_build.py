@@ -185,19 +185,21 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
             if self.pre_build_script:
                 self.engine.run_script(self.build_container, self.pre_build_script,
                                        shell=self.pre_build_script_shell, user=self.pre_build_script_user)
-            self.engine.run_cmd(
-                self.build_container,
-                "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
-                .format(arch=self.arch, packages=' '.join(self.build_dependencies),
-                        env=' '.join(['='.join(x) for x in self.build_env.items()])))
+            if self.build_dependencies:
+                self.engine.run_cmd(
+                    self.build_container,
+                    "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
+                    .format(arch=self.arch, packages=' '.join(self.build_dependencies),
+                            env=' '.join(['='.join(x) for x in self.build_env.items()])))
             if self.build_script:
                 self.engine.run_script(self.build_container, self.build_script,
                                        shell=self.build_script_shell, user=self.build_script_user)
-            self.engine.run_cmd(
-                self.build_container,
-                "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
-                .format(arch=self.arch, packages=' '.join(self.packages),
-                        env=' '.join(['='.join(x) for x in self.build_env.items()])))
+            if self.packages:
+                self.engine.run_cmd(
+                    self.build_container,
+                    "env {env} chroot-{arch}-docker -c \"emerge -kb --binpkg-respect-use=y {packages}\""
+                    .format(arch=self.arch, packages=' '.join(self.packages),
+                            env=' '.join(['='.join(x) for x in self.build_env.items()])))
             package_atoms = ["={}".format(
                 self.engine.run_cmd(
                     self.build_container,
@@ -205,10 +207,11 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                     "head -1"
                     .format(arch=self.arch, package=package),
                     quiet=True, return_output=True)) for package in self.packages]
-            self.engine.run_cmd(
-                self.build_container,
-                "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
-                    arch=self.arch, packages=' '.join(package_atoms)))
+            if package_atoms:
+                self.engine.run_cmd(
+                    self.build_container,
+                    "chroot-{arch}-docker -c \"ROOT=/dockeroo-root emerge -OK {packages}\"".format(
+                        arch=self.arch, packages=' '.join(package_atoms)))
             if self.post_build_script:
                 self.engine.run_script(self.build_container, self.post_build_script,
                                        shell=self.post_build_script_shell, user=self.post_build_script_user)
