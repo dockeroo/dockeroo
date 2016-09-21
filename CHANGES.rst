@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.27 (21-09-2016)
+-----------------
+
+- Added support for post-build-{script,shell,script} parameters on dockeroo:gentoo-build recipe.
+  IMPORTANT: build-script stage has been anticipated and now its previous stage has been replaced by
+  post-build-script.
+
+
 0.26 (19-09-2016)
 -----------------
 
