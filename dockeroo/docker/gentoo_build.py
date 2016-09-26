@@ -140,7 +140,7 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
                 "echo {modifier} >>/etc/portage/package.{name} || "
                 "mkdir -p /etc/portage/package.{name} && "
                 "echo {modifier} >>/etc/portage/package.{name}/{slug}\"".format(
-                    arch=self.arch, modifier=quote(modifier), slug, name=name))
+                    arch=self.arch, modifier=quote(modifier), slug=slug, name=name))
 
     def create_base_image(self, name):
         if self.archives:
