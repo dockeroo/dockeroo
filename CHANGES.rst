@@ -1,6 +1,18 @@
 Changelog
 =========
 
+0.29 (26-09-2016)
+-----------------
+
+- Updated dockeroo:gentoo-build add_package_modifier() to support package.* folders.
+
+
+0.28 (21-09-2016)
+-----------------
+
+- Fixed dockeroo:gentoo-build which didn't account for empty build dependencies.
+
+
 0.27 (21-09-2016)
 -----------------
 

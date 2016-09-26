@@ -133,10 +133,14 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
 
     def add_package_modifier(self, name, modifiers):
         for modifier in modifiers:
+            slug = re.sub(r'\W+', '_', modifier.split(None, 1)[0])
             self.engine.run_cmd(
                 self.build_container,
-                "chroot-{arch}-docker -c \"echo {modifier} >>/etc/portage/package.{name}\"".format(
-                    arch=self.arch, modifier=quote(modifier), name=name))
+                "chroot-{arch}-docker -c \"test -f /etc/portage/package.{name} && "
+                "echo {modifier} >>/etc/portage/package.{name} || "
+                "mkdir -p /etc/portage/package.{name} && "
+                "echo {modifier} >>/etc/portage/package.{name}/{slug}\"".format(
+                    arch=self.arch, modifier=quote(modifier), slug, name=name))
 
     def create_base_image(self, name):
         if self.archives:
