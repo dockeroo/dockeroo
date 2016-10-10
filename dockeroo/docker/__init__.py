@@ -267,7 +267,7 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
             args.append("--change='LABEL \"{}\"=\"{}\"".format(key, value))
         for port in expose or []:
             args.append("--change='EXPOSE {}'".format(port))
-        for volume in volumes:
+        for volume in volumes or []:
             args.append("--change='VOLUME {}'".format(volume))
         args += [container, image]
         proc = DockerProcess(self, args, stdout=FNULL)
