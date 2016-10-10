@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.30 (10-10-2016)
+-----------------
+
+- Fixed dockeroo:gentoo-build "volumes" parameter declaration.
+
+
 0.29 (26-09-2016)
 -----------------
 

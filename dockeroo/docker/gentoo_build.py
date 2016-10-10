@@ -125,10 +125,10 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
         self.labels = dict([y for y in [x.strip().split('=')
                                         for x in self.options.get('labels', '').splitlines()]
                             if y[0]])
-        self.expose = [_f for _f in [x.strip() for x in self.options.get('expose', '').splitlines()]
-                       if _f]
-        self.volumes = [y for y in [x.strip().split(
-            ':', 1) for x in self.options.get('volumes', '').splitlines()] if y[0]]
+        self.expose = [y for y in [x.strip() for x in self.options.get('expose', '').splitlines()]
+                       if y]
+        self.volumes = [y for y in [x.strip() for x in self.options.get('volumes', '').splitlines()]
+                        if y]
         self.volumes_from = self.options.get('volumes-from', None)
 
     def add_package_modifier(self, name, modifiers):
