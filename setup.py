@@ -28,7 +28,7 @@ VERSION = '0.31'
 
 requires = [
     'future>=0.15.2',
-    'pytz>=2016.7',
+    'pytz>=2016',
     'setuptools>8',
     'shellescape>=3.4.1',
     'tzlocal>=1.3',
