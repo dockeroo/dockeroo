@@ -20,7 +20,7 @@ import shlex
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import pkg_resources
-env = pkg_resources.Environment(['..', '../.eggs'])
+env = pkg_resources.Environment([os.path.abspath(os.path.join(os.path.dirname(__file__), x)) for x in ['..', '../.eggs']])
 for egg in pkg_resources.working_set.resolve([pkg_resources.Requirement.parse('dockeroo')], env):
     pkg_resources.working_set.add(egg)
 
