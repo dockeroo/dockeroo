@@ -432,6 +432,9 @@ class DockerGentooBuildRecipe(BaseGroupRecipe):
        assemble-script-user
            User for **script** execution. Defaults to docker default.
 
+       tag 
+           Tag name. Defaults to "latest".
+
        tty
            Assign a **Pseudo-TTY** to the **build-container** and **assemble-container**.
 

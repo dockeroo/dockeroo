@@ -79,10 +79,13 @@ class DockerBuildRecipe(BaseGroupRecipe):
            Don't delete image upon uninstall.
 
        name
-           Name of the image to apply as tag. Defaults to part name.
+           Name of the image. Defaults to part name.
 
        source
            Path or URL to pass as argument to **docker build**.
+
+       tag 
+           Tag name. Defaults to "latest".
 
        timeout
           **docker** command timeout.

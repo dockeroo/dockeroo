@@ -117,22 +117,22 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
     """
     This recipe creates a docker image that contains a full operating system (typically Gentoo).
     Such builder image can be used to create further docker images with :py:class:`dockeroo.docker.gentoo_build.DockerGentooBuildRecipe` recipe.
-    
+
     The recipe executes the following tasks:
-    
+
     1. Extract **archives** into a docker image.
     2. Create a container from such image.
     3. Install "freeze" binary into the container. This is a simple no-op binary executable.
     4. If a **layout** is defined, copy layout contents onto container's root.
     5. Execute **build-script**.
     6. If **commit** is enabled, commit modifications of image.
-    
+
     .. describe:: Usage
 
        The following example buildout part shows how to build a full Gentoo amd64 docker image.
 
     .. code-block:: ini
-    
+
        [crossdev_builder.img]
        crossdev-arch = x86_64
        crossdev-platform = x86_64
@@ -174,7 +174,7 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
            chroot-${:crossdev-arch}-docker -c env-update
 
     To use the above part, several other files are necessary, to be copied in via **layout**::
-    
+
        /etc/locale.gen
        /etc/portage/repos.conf/crossdev.conf
        /etc/portage/repos.conf/local.conf
@@ -187,13 +187,13 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
        /usr/x86_64-docker-linux-gnu/etc/portage/make.conf
 
     Here's an example of chroot-x86_64-docker script, useful to build docker images with :py:class:`dockeroo.docker.gentoo_build.DockerGentooBuildRecipe` recipe:
-    
+
     .. code-block:: bash
-    
+
        #!/bin/sh
-       
+
        cd /usr/x86_64-docker-linux-gnu
-       
+
        set -e
        mkdir -p dev proc sys tmp etc/portage/repos.conf usr/portage usr/local/portage-crossdev-x86_64/packages var/lib/layman
        mount -o bind /dev dev
@@ -206,74 +206,77 @@ class DockerGentooBootstrapRecipe(BaseGroupRecipe):
        mount -o bind /usr/portage usr/portage
        mount -o bind /usr/portage/distfiles usr/portage/distfiles
        mount -o bind /usr/local/portage-crossdev-x86_64 usr/local/portage-crossdev-x86_64
-       mount -o bind /usr/local/portage-crossdev-x86_64/packages usr/local/portage-crossdev-x86_64/packages                                                                                         
-       mount -o bind /var/lib/layman var/lib/layman                                                                                                                                                 
-       cp /etc/resolv.conf etc/resolv.conf                                                                                                                                                          
-       set +e                                                                                                                                                                                       
-                                                                                                                                                                                                    
-       chroot . /bin/bash --login "$@"                                                                                                                                                              
-       ret=$?                                                                                                                                                                                       
-                                                                                                                                                                                                    
-       set -e                                                                                                                                                                                       
-       umount var/lib/layman                                                                                                                                                                        
-       umount usr/local/portage-crossdev-x86_64/packages                                                                                                                                            
-       umount usr/local/portage-crossdev-x86_64                                                                                                                                                     
-       umount usr/portage/distfiles                                                                                                                                                                 
-       umount usr/portage                                                                                                                                                                           
-       umount tmp                                                                                                                                                                                   
-       umount sys                                                                                                                                                                                   
-       umount proc                                                                                                                                                                                  
-       umount etc/portage/repos.conf                                                                                                                                                                
-       umount dev/shm                                                                                                                                                                               
-       umount dev/pts                                                                                                                                                                               
-       umount dev                                                                                                                                                                                   
-       set +e                                                                                                                                                                                       
-                                                                                                                                                                                                    
+       mount -o bind /usr/local/portage-crossdev-x86_64/packages usr/local/portage-crossdev-x86_64/packages
+       mount -o bind /var/lib/layman var/lib/layman
+       cp /etc/resolv.conf etc/resolv.conf
+       set +e
+
+       chroot . /bin/bash --login "$@"
+       ret=$?
+
+       set -e
+       umount var/lib/layman
+       umount usr/local/portage-crossdev-x86_64/packages
+       umount usr/local/portage-crossdev-x86_64
+       umount usr/portage/distfiles
+       umount usr/portage
+       umount tmp
+       umount sys
+       umount proc
+       umount etc/portage/repos.conf
+       umount dev/shm
+       umount dev/pts
+       umount dev
+       set +e
+
        exit $ret
 
     .. describe:: Configuration options
 
        archives
            List of URLs of operating system initial filesystem contents (Gentoo stageX).
-       
+
        crossdev-platform
            Name of destination platform. If enabled, allows automatic configuration of QEMU binfmt mapping.
-       
+
        command
            Command to execute upon container starting. Defaults to "/bin/freeze".
-       
+
        commit
            Commit image changes after recipe install execution. Defaults to false.
-       
+
        container
            Name of build container.
-       
+
        keep
            Don't delete image upon uninstall.
-       
+
        layout
            Copies a local folder to container's root with **docker cp**.
-       
+
        machine-name
           Docker machine where **build-image** and **base-image** reside.
           Defaults to DOCKER_MACHINE_NAME environment variable or "default" if unset.
-       
-       name 
+
+       name
            Name of destination image. Defaults to part name.
-       
+
        build-script
            Execute this script after extraction of archives filesystem and import of layout.
-       
-       timeout                                                                                                                                                                                          
-          **docker** command timeout.                                                                                                                                                                   
-                                                                                                                                                                                                        
-       tty                                                                                                                                                                                              
-           Assign a **Pseudo-TTY** to the container.                                                                                                                                                    
-                                                                                                                                                                                                        
-       volumes                                                                                                                                                                                          
-           Volumes to bind mount, one per line. Format is <path>:<mountpoint>.                                                                                                                          
-                                                                                                                                                                                                        
-       volumes-from                                                                                                                                                                                     
+
+       tag 
+           Tag name. Defaults to "latest".
+
+       timeout
+          **docker** command timeout.
+
+       tty
+           Assign a **Pseudo-TTY** to the container.
+
+       volumes
+           Volumes to bind mount, one per line. Format is <path>:<mountpoint>.
+
+       volumes-from
            Mount volumes from specified container.
     """
     subrecipe_class = DockerGentooBootstrapSubRecipe
