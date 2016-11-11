@@ -18,7 +18,9 @@
 
 from collections import defaultdict
 from datetime import datetime, timedelta, tzinfo
+import errno
 from functools import wraps
+import os
 import random
 import re
 import string
@@ -276,3 +278,13 @@ def string_as_bool(obj):
 def uniq(seq):
     seen = set()
     return [x for x in seq if x not in seen and not seen.add(x)]
+
+def mkdir(*paths):
+    for path in paths:
+        try:
+            os.makedirs(path)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass
+            else:
+                raise

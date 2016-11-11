@@ -17,7 +17,6 @@
 
 
 from collections import defaultdict
-import errno
 from importlib import import_module
 from itertools import chain
 import logging
@@ -43,6 +42,7 @@ from dockeroo.filters import RecipeFilter
 from dockeroo.utils import ExternalProcessError
 from dockeroo.utils import OptionRepository, reify
 from dockeroo.utils import string_as_bool, uniq
+from dockeroo.utils import mkdir
 
 
 FILTERS = []
@@ -420,17 +420,12 @@ class BaseRecipe(object): # pylint: disable=too-many-public-methods,too-many-ins
                 self.logger.error('Error occurred when cleaning after error: "%s"', strerror)
             raise error
 
-    def mkdir(self, *paths): # pylint: disable=no-self-use
-        for path in paths:
-            try:
-                os.makedirs(path)
-            except OSError as exc:
-                if exc.errno == errno.EEXIST and os.path.isdir(path):
-                    pass
-                else:
-                    raise
+    @staticmethod
+    def mkdir(*paths):
+        mkdir(*paths)
 
-    def rm(self, *paths): # pylint: disable=no-self-use,invalid-name
+    @staticmethod
+    def rm(*paths): # pylint: disable=invalid-name
         for path in paths:
             if os.path.isdir(path):
                 shutil.rmtree(path)

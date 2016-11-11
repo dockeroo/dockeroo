@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.34 (11-11-2016)
+-----------------
+
+- Added directory creation for path in dockeroo:docker.save recipe.
+
+
 0.33 (11-11-2016)
 -----------------
 

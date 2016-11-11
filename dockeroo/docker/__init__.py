@@ -42,6 +42,7 @@ from dockeroo import BaseRecipe, BaseSubRecipe
 from dockeroo.docker_machine import DockerMachine
 from dockeroo.utils import ExternalProcessError
 from dockeroo.utils import reify, parse_datetime, random_name, listify
+from dockeroo.utils import mkdir
 
 standard_library.install_aliases()
 
@@ -810,6 +811,7 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
                 "Error running script on container \"{}\"".format(container), proc)
 
     def save_image(self, image, path):
+        mkdir(os.path.dirname(path))
         args = ['save', '-o', path, image]
         proc = DockerProcess(self, args, stdout=FNULL)
         if proc.wait() != 0:
