@@ -36,6 +36,13 @@ dockeroo:docker.gentoo-diskimage
 
 .. autoclass:: DockerGentooDiskImageRecipe
 
+dockeroo:docker.load
+--------------------
+
+.. module:: dockeroo.docker.load
+
+.. autoclass:: DockerLoadRecipe
+
 dockeroo:docker.network
 -----------------------
 
@@ -63,6 +70,13 @@ dockeroo:docker.run
 .. module:: dockeroo.docker.run
 
 .. autoclass:: DockerRunRecipe
+
+dockeroo:docker.save
+--------------------
+
+.. module:: dockeroo.docker.save
+
+.. autoclass:: DockerSaveRecipe
 
 dockeroo:docker.volume
 ----------------------

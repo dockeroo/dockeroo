@@ -56,7 +56,7 @@ class DockerPushRecipe(BaseGroupRecipe):
     
     .. code-block:: ini
     
-       [my_image_pull]
+       [my_image_push]
        recipe = dockeroo:docker.push
        image = my_image
        username = my_dockerhub_username

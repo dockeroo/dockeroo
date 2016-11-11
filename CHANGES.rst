@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.33 (11-11-2016)
+-----------------
+
+- Added support for dockeroo:docker.load and dockeroo:docker.save recipes.
+
+
 0.32 (11-11-2016)
 -----------------
 

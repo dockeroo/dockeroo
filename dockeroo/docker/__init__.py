@@ -648,6 +648,13 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
             raise ExternalProcessError(
                 "Error loading archive on container \"{}\"".format(container), proc)
 
+    def load_image(self, image, path):
+        args = ['load', '-i', path, image]
+        proc = DockerProcess(self, args, stdout=FNULL)
+        if proc.wait() != 0:
+            raise ExternalProcessError(
+                "Error loading image \"{}\"".format(image), proc)
+
     def load_layout(self, container, path, root="/", uid=0, gid=0):
         self.logger.info(
             "Loading layout \"%s\" on container \"%s\"", path, container)
@@ -665,7 +672,6 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         if proc.wait() != 0:
             raise ExternalProcessError(
                 "Error loading layout on container \"{}\"".format(container), proc)
-
 
     @listify
     def networks(self, **filters):
@@ -802,6 +808,13 @@ class DockerEngine(object): # pylint: disable=too-many-public-methods
         if proc.wait() != 0:
             raise ExternalProcessError(
                 "Error running script on container \"{}\"".format(container), proc)
+
+    def save_image(self, image, path):
+        args = ['save', '-o', path, image]
+        proc = DockerProcess(self, args, stdout=FNULL)
+        if proc.wait() != 0:
+            raise ExternalProcessError(
+                "Error saving image \"{}\"".format(image), proc)
 
     def save_layout(self, container, src, dst):
         self.logger.info(
