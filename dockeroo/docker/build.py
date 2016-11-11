@@ -25,9 +25,9 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
 
     def initialize(self):
         super(DockerBuildSubRecipe, self).initialize()
+        self.tag = self.options.get("tag", "latest")
+        self.name += ':{}'.format(self.tag)
 
-        if ':' not in self.name:
-            self.name += ':latest'
         self.source = self.options['source']
         self.build_args = dict([
             y for y in [x.strip().split('=', 1)
@@ -35,7 +35,10 @@ class DockerBuildSubRecipe(BaseDockerSubRecipe):
         self.keep = string_as_bool(self.options.get('keep', False))
 
     def install(self):
-        if not next(self.engine.images(self.name), None):
+        image = next(self.engine.images(self.name), None)
+        if not image or (self.source and ':' not in self.source and self.is_layout_updated(self.source)):
+            if image is not None:
+                self.engine.remove_image(self.name)
             self.engine.build_dockerfile(self.name,
                                          self.source,
                                          **self.build_args)

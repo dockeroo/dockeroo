@@ -1,10 +1,18 @@
 Changelog
 =========
 
+0.32 (11-11-2016)
+-----------------
+
+- Updated dockeroo:docker.build behavior: when image already exists, check if it's older than installed one.
+- Fixed adding tag to part name behavior through option "tag".
+
+
 0.31 (23-10-2016)
 -----------------
 
 - Fixed minimum required egg versions.
+
 
 0.30 (10-10-2016)
 -----------------

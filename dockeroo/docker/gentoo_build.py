@@ -31,6 +31,8 @@ class DockerGentooBuildSubRecipe(BaseDockerSubRecipe): # pylint: disable=too-man
 
     def initialize(self):
         super(DockerGentooBuildSubRecipe, self).initialize()
+        self.tag = self.options.get("tag", "latest")
+        self.name += ':{}'.format(self.tag)
 
         base_name = re.sub(r'\W+', '_', self.name)
 

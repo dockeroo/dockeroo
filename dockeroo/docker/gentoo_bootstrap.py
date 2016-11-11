@@ -27,8 +27,8 @@ class DockerGentooBootstrapSubRecipe(BaseDockerSubRecipe): # pylint: disable=too
 
     def initialize(self):
         super(DockerGentooBootstrapSubRecipe, self).initialize()
-        if ':' not in self.name:
-            self.name += ':latest'
+        self.tag = self.options.get("tag", "latest")
+        self.name += ':{}'.format(self.tag)
 
         self.command = self.options.get("command", "/bin/freeze")
         self.commit = string_as_bool(self.options.get('commit', False))
