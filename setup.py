@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.rst')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
-VERSION = '0.34'
+VERSION = '0.35'
 
 requires = [
     'future>=0.15.2',
@@ -32,7 +32,7 @@ requires = [
     'setuptools>8',
     'shellescape>=3.4.1',
     'tzlocal>=1.3',
-    'zc.buildout>=2.5.3',
+    'zc.buildout>=2.5.2',
     ]
 
 warnings.filterwarnings('ignore', '.*', UserWarning, 'distutils.dist', 267)

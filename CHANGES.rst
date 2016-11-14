@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.35 (14-11-2016)
+-----------------
+
+- Adjusted zc.buildout dependency to support non-wheel environment.
+
+
 0.34 (11-11-2016)
 -----------------
 
